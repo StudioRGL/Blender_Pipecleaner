@@ -2,7 +2,7 @@
 
 import bpy, math
 from mathutils import Vector, geometry
-
+from enum import Enum
             
 def polarToCartesian(r, phi, theta): # theta = v, phi = u
     """radius r, inclination theta, azimuth phi"""
@@ -40,7 +40,11 @@ def degreesToFirstPositiveDegrees(angle):
         answer += 360
     return answer
 
-
+# -------------------------------------------------------------------------------------------------------  
+class StrokeType(Enum):
+    marker           = 0
+    planar_axial     = 1
+    planar_arbitrary = 2
 
 # -------------------------------------------------------------------------------------------------------      
 class Camera():
@@ -56,6 +60,8 @@ class Camera():
         self.elevation= math.degrees(rotation_euler[2])
         
         print ('got camera, position', self.origin, ', heading', self.heading, ', elevation', self.elevation)
+
+
 # -------------------------------------------------------------------------------------------------------
 class AxialPlanarStrokeCluster():
     """Contains a load of AXIAL, PLANAR strokes which are (directly or indirectly) connnected to each other
@@ -65,11 +71,13 @@ class AxialPlanarStrokeCluster():
         """initialise. We give it one stroke and it should connect the dots"""
         self.strokes = [firstStroke]
         # now go through all connected strokes, and add them to the cluster
+        #           get every AXIAL planar stroke attached to it recursively, and add them to the cluster (stop at ARBITRARY planar strokes)
     
     def __repr__(self):
         """The print statement"""
         return ('AxialPlanarStrokeCluster with ' + str(len(self.strokes)) + ' strokes')
-    
+
+
 # -------------------------------------------------------------------------------------------------------
 class Stroke():
     # containts reference to the stroke, methods for getting its screen space data, etc
@@ -282,6 +290,7 @@ class PlanarStroke(Stroke):
         self.normal = None    
         self.planeOrigin = None
         self.hasBeenDefined = False # has it been defined in xyz space or just polar
+        #self.cluster = None # used when building clusters I guess?
         
     def __repr__(self):
         """the print statement"""
@@ -298,6 +307,13 @@ class PlanarStroke(Stroke):
         """The normal to the plane in which this stroke is, give it a vector"""
         self.normal = normal   
     
+    def strokeType(self):
+        """what kinda stroke are we?"""
+        if self.normal==None:
+            return StrokeType.planar_arbitrary
+        else:
+            return StrokeType.planar_axial
+
     def rePlane(self):
         """Recalculates all the point coordinates based on the polar coordinates, cameraOrigin, normal and planeOrigin
         If no normal has been specified, searches all intersecting planes to try to find 3
@@ -326,7 +342,6 @@ class PlanarStroke(Stroke):
                     #print('no')
                     pass
 
-            
             nDefinedIntersections = len(definedIntersectionMarkers)
             print ('arbitrary plane found with ' + str(nDefinedIntersections) + '/' + str(len(self.intersections)) + ' intersections defined')
             
@@ -356,6 +371,9 @@ class PlanarStroke(Stroke):
             else:
                 # ok, so we have at least 3 intersections
                 pass
+
+    
+
                             
                      
                 
@@ -382,6 +400,23 @@ class PlanarStroke(Stroke):
 
 
         self.hasBeenDefined = True #whoop
+    
+    def connectedPlanarStrokes(self, strokeTypes = [StrokeType.planar_axial], connectionList = []):
+        """recursively returns connected strokes with the following types"""
+        #connectionList.append(self) # this should work right? right?
+        for marker in self.intersections: # all strokes intersecting with a planar stroke are MARKERS
+            # go through all strokes connected to the markers
+            for intersectingStroke in marker.intersections:
+                if intersectingStroke not in connectionList: # ok, it's not us, and it hasn't already been done
+                    if intersectingStroke.strokeType() in strokeTypes:
+                        connectionList.append(intersectingStroke)
+                        # do all connecting strokes? recurse...
+                        
+                        # how do we avoid doing ones we already have
+                    pass
+                pass
+            pass
+        return connectionList
 
 # -------------------------------------------------------------------------------------------------------
 
@@ -467,6 +502,28 @@ def getStrokeData(camera):
             raise(Exception("couldn't find any gpencil data for current frame, doing nothing!"))
     return (planarStrokes, intersectionMarkers)
 
+def getClusters(planarStrokes):
+    """This should hopefully get all the clusters of contiguous axial planar strokes, and return them"""
+    # create clusters of all directly-connected axial strokes by :
+    # pick a stroke
+
+    print ('getting clusters....')
+
+    clusters = []
+    for planarStroke in planarStrokes: # then for every AXIAL planar stroke
+        pass
+        #   is the stroke in any existing cluster?
+        strokeInCluster = False
+        for cluster in clusters:
+            if planarStroke in cluster.strokes:
+                strokeInCluster = True
+                break
+        if strokeInCluster == False: #       if not:
+            newCluster = AxialPlanarStrokeCluster(planarStroke) #           create a cluster, populate it
+            clusters.append(newCluster)
+
+    print ('done.')
+    return clusters
 
 def recursivelyReplane(replaneStroke):
     if replaneStroke.hasBeenDefined == False and replaneStroke.planeOrigin==None:
@@ -545,7 +602,6 @@ def solveContours():
     """ok, so I guess this is gonna be the big guy"""
     print ('-'*100+'\nsolving contours....')
     
-  
     # get the camera info
     camera = Camera(bpy.context.scene.camera)
     
@@ -571,7 +627,7 @@ def solveContours():
     
     
     # ok, so, refactored version would be:
-    
+    clusters = getClusters(planarStrokes)
     # create clusters of all directly-connected axial strokes by :
     # pick a stroke
     # then for every AXIAL planar stroke
@@ -595,10 +651,17 @@ def solveContours():
     # for arbitrary planar strokes, all parents must be from one cluster
     
     
+    connectedStrokes = (planarStrokes[0].connectedPlanarStrokes())
+    print (len(connectedStrokes), 'strokes connected')
+
+    # temp hack disable
+    return
     
     
     
-    
+
+
+
     
     # prioritize the strokes - the one with the most intersections is the most important I guess? then by number of points? then by index?
     planarStrokes.sort()
@@ -621,7 +684,7 @@ def solveContours():
 
 
 
-flattenAll()
+#flattenAll()
 solveContours()
 
 
