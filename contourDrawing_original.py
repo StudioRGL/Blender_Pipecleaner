@@ -1,7 +1,7 @@
 # The main code for this thang
 
 import bpy, math
-from mathutils import Vector
+from mathutils import Vector, geometry
 
             
 def polarToCartesian(r, phi, theta): # theta = v, phi = u
@@ -40,73 +40,6 @@ def degreesToFirstPositiveDegrees(angle):
         answer += 360
     return answer
 
-# from  https://stackoverflow.com/questions/5666222/3d-line-plane-intersection
-# intersection function
-def isect_line_plane_v3(p0, p1, p_co, p_no, epsilon=1e-6):
-    """
-    p0, p1: define the line
-    p_co, p_no: define the plane:
-        p_co is a point on the plane (plane coordinate).
-        p_no is a normal vector defining the plane direction;
-             (does not need to be normalized).
-
-    return a Vector or None (when the intersection can't be found).
-    """
-
-    u = sub_v3v3(p1, p0)
-    dot = dot_v3v3(p_no, u)
-
-    if abs(dot) > epsilon:
-        # the factor of the point between p0 -> p1 (0 - 1)
-        # if 'fac' is between (0 - 1) the point intersects with the segment.
-        # otherwise:
-        #  < 0.0: behind p0.
-        #  > 1.0: infront of p1.
-        w = sub_v3v3(p0, p_co)
-        fac = -dot_v3v3(p_no, w) / dot
-        u = mul_v3_fl(u, fac)
-        return add_v3v3(p0, u)
-    else:
-        # The segment is parallel to plane
-        return None
-
-# ----------------------
-# generic math functions
-
-def add_v3v3(v0, v1):
-    return (
-        v0[0] + v1[0],
-        v0[1] + v1[1],
-        v0[2] + v1[2],
-        )
-
-
-def sub_v3v3(v0, v1):
-    return (
-        v0[0] - v1[0],
-        v0[1] - v1[1],
-        v0[2] - v1[2],
-        )
-
-
-def dot_v3v3(v0, v1):
-    return (
-        (v0[0] * v1[0]) +
-        (v0[1] * v1[1]) +
-        (v0[2] * v1[2])
-        )
-
-
-def len_squared_v3(v0):
-    return dot_v3v3(v0, v0)
-
-
-def mul_v3_fl(v0, f):
-    return (
-        v0[0] * f,
-        v0[1] * f,
-        v0[2] * f,
-        )
 
 
 # -------------------------------------------------------------------------------------------------------      
@@ -439,7 +372,8 @@ class PlanarStroke(Stroke):
             p1 = point.co 
             p_co = self.planeOrigin # p_co is a point on the plane (plane coordinate).
             p_no = self.normal #p_no is a normal vector defining the plane direction (does not need to be normalized).
-            intersectionPoint = isect_line_plane_v3(p0, p1, p_co, p_no) # should not be none!
+            #intersectionPoint = isect_line_plane_v3(p0, p1, p_co, p_no) # should not be none!
+            intersectionPoint = geometry.intersect_line_plane(p0, p1, p_co, p_no)
             if intersectionPoint==None:
                 raise(Exception("A bad thing happened that shouldn't have happened...."))
 
@@ -555,7 +489,8 @@ def recursivelyReplane(replaneStroke):
         p1 = Vector(polarToCartesian(1, polarCoordinate[0], polarCoordinate[1])) + replaneStroke.cameraOrigin  # eh gotta get the xyz from the polar, dang. MAYBE CHECK - need to compensate for cam origin not being at zero so added it...?
         p_co = replaneStroke.planeOrigin # p_co is a point on the plane (plane coordinate).
         p_no = replaneStroke.normal #p_no is a normal vector defining the plane direction (does not need to be normalized).
-        cartesianCoordinate = isect_line_plane_v3(p0, p1, p_co, p_no) # should not be none!
+        #cartesianCoordinate = isect_line_plane_v3(p0, p1, p_co, p_no) # should not be none!
+        cartesianCoordinate = geometry.intersect_line_plane(p0, p1, p_co, p_no)
         
         # ok, now we know the worldspace position of the intersection
         # need to also store this coordinate on the MARKER?
@@ -686,8 +621,8 @@ def solveContours():
 
 
 
-#flattenAll()
-#solveContours()
+flattenAll()
+solveContours()
 
 
 print('Finished running code.')
