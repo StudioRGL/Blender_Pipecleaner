@@ -71,15 +71,15 @@ class PlanarStrokeCluster():
         """initialise from just Axial Planar Strokes. We give it one stroke and it should connect the dots"""
         #self.strokes = [firstStroke] # should it be a set? those can't be mutable, though
         self.strokes = [firstStroke]
-        self.strokes += firstStroke.allConnectedPlanarStrokes(strokeTypes=[StrokeType.planar_axial], connectionList = [firstStroke]) # how to make sure these are not in the cluster already!?
-        pass
-        # we DON'T need to give it existing clusters because all strokes in that cluster would already be in a cluster
-        # now go through all connected strokes, and add them to the cluster
-        #           get every AXIAL planar stroke attached to it recursively, and add them to the cluster (stop at ARBITRARY planar strokes)
+        self.strokes += firstStroke.allConnectedPlanarStrokes(strokeTypes=[StrokeType.planar_axial], connectionList = [firstStroke]) # add all connected planar strokes
+        # we DON'T need to give it existing clusters because all strokes in that cluster would already be in a cluster and by definition can't be connected to this one
+        self.potentialConnections = self.indirectlyConnectedStrokes()
+        
     
     def __repr__(self):
         """The print statement"""
         return ('PlanarStrokeCluster with ' + str(len(self.strokes)) + ' strokes')
+
 
     def mostConnectedStroke(self):
         self.strokes.sort()
@@ -89,21 +89,41 @@ class PlanarStrokeCluster():
         else:
             raise(Exception("could not get 'most connected stroke' from empty stroke cluster"))
 
+
     def indirectlyConnectedStrokes(self):
         """ alternately expands by ARBITRARY strokes (need 3 connections) and AXIAL strokes (need 1 connection) until we don't get any more"""
-        indirectlyConnectedStrokes = self.strokes # initialize it
+        answer = self.strokes[:] # initialize it
         
-        prevNStrokes = len(indirectlyConnectedStrokes)
+        prevNStrokes = len(answer)
         for strokeType in [StrokeType.planar_arbitrary, StrokeType.planar_axial]:
             newConnections = []
-            for stroke in indirectlyConnectedStrokes:
+            for stroke in answer:
+                # ok, check all the connected strokes of our new type
+                for iStroke in stroke.allConnectedPlanarStrokes(strokeTypes = [strokeType], connectionList=answer):
+                    # the number of required connections depends on the type of stroke
+                    if strokeType==StrokeType.planar_axial: # just needs one connection
+                        # well, just add it on
+                        answer.append(iStroke)
+                    elif strokeType==StrokeType.planar_arbitrary: # needs 3 connections
+                        # check how many connections it has in the current group
+                        connectionCount = 0
+                        for connector in iStroke.adjacentPlanarStrokes():
+                            if connector in answer:
+                                connectionCount+=1
+                            if connectionCount>=3:
+                                # we got it! whoo!
+                                answer.append(iStroke)
+                                break
+                    else:
+                        raise(Exception("Unexpected stroke type!"))
                 pass
             pass
-            if len(newConnections>0):
+            if len(newConnections)>0:
                 # if we got any new ones
-                indirectlyConnectedStrokes+=newConnections
+                answer+=newConnections
             else:
                 break # nothing to see here, think we got em all!
+        return answer
 
 
 
@@ -225,8 +245,7 @@ class Stroke():
             return True
 
         return False # Doesn't fall in any of the above cases
-    
-    
+
     def get_lineIntersectionPoint(self, A, B, C, D): # expects xy for A, B, C, D
         # from https://stackoverflow.com/questions/3252194/numpy-and-line-intersections
         # a1x + b1y = c1
@@ -276,10 +295,10 @@ class Stroke():
                         
                         if self.do_intersect((lineA_x1,lineA_y1), (lineA_x2,lineA_y2), (lineB_x1,lineB_y1), (lineB_x2,lineB_y2)): 
                             #print ('intersection found:',iSegment,jSegment,(lineA_x1,lineA_y1), (lineA_x2,lineA_y2), (lineB_x1,lineB_y1), (lineB_x2,lineB_y2))
-                            self.gpStroke.points[iSegment].select=True
-                            self.gpStroke.points[iSegment+1].select=True 
-                            b.gpStroke.points[jSegment].select=True
-                            b.gpStroke.points[jSegment+1].select=True
+                            #self.gpStroke.points[iSegment].select=True
+                            #self.gpStroke.points[iSegment+1].select=True 
+                            #b.gpStroke.points[jSegment].select=True
+                            #b.gpStroke.points[jSegment+1].select=True
                             
                             # ok and let's find the real intersection:
                             #slopeA = (lineA_x2-lineA_x1)/(lineA_y2-lineA_y1) # doesn't work if y is 0
@@ -404,9 +423,7 @@ class PlanarStroke(Stroke):
                 # ok, so we have at least 3 intersections
                 pass
 
-    
-
-                            
+           
                      
                 
             
@@ -433,7 +450,7 @@ class PlanarStroke(Stroke):
 
         self.hasBeenDefined = True #whoop
     
-    def directlyConnectedPlanarStrokes(self):
+    def adjacentPlanarStrokes(self):
         """return the planar strokes intersecting with markers intersecting with this that aren't this"""
         answer = []
         for marker in self.intersections: # all strokes intersecting with a planar stroke are MARKERS
@@ -447,7 +464,7 @@ class PlanarStroke(Stroke):
         """recursively returns connected strokes with the following types"""
         # go through all strokes to this one
         newConnectionList = []
-        for intersectingStroke in self.directlyConnectedPlanarStrokes():
+        for intersectingStroke in self.adjacentPlanarStrokes():
             if intersectingStroke not in connectionList: # ok, if it hasn't already been done
                 if intersectingStroke.strokeType() in strokeTypes:
                     newConnectionList.append(intersectingStroke)
@@ -458,6 +475,12 @@ class PlanarStroke(Stroke):
 
         return newConnectionList
 
+    def highlightIfDisconnected(self):
+        if len(self.adjacentPlanarStrokes())==0: # we got nothin'
+            self.gpStroke.select = True
+
+                 
+
 # -------------------------------------------------------------------------------------------------------
 
 
@@ -466,7 +489,7 @@ def getActiveGreasePencilObject():
     gp = bpy.context.active_object
     if gp.type != 'GPENCIL':
         raise(Exception("make sure you have a gpencil object active"))
-    return gp
+    return gpzz
     
 
 def getStrokeData(camera):
@@ -542,6 +565,7 @@ def getStrokeData(camera):
             raise(Exception("couldn't find any gpencil data for current frame, doing nothing!"))
     return (planarStrokes, intersectionMarkers)
 
+
 def getClusters(planarStrokes):
     """This should hopefully get all the clusters of contiguous axial planar strokes, and return them"""
     # create clusters of all directly-connected axial strokes by :
@@ -550,8 +574,8 @@ def getClusters(planarStrokes):
     print ('getting clusters....')
 
     clusters = []
-    for planarStroke in planarStrokes: # then for every AXIAL planar stroke
-        if planarStroke.strokeType()==StrokeType.planar_axial:
+    for planarStroke in planarStrokes: # then for every planar stroke
+        if planarStroke.strokeType()==StrokeType.planar_axial: # only do this for axial ones
             #   is the stroke in any existing cluster?
             strokeInCluster = False
             for cluster in clusters:
@@ -564,6 +588,7 @@ def getClusters(planarStrokes):
 
     print ('done, found', len(clusters), ' clusters')
     return clusters
+
 
 def recursivelyReplane(replaneStroke):
     if replaneStroke.hasBeenDefined == False and replaneStroke.planeOrigin==None:
@@ -625,7 +650,6 @@ def flattenAll():
     gp = getActiveGreasePencilObject()
     layer = gp.data.layers.active
     frames = layer.frames.values()
-    currentFrameFound = False
     for frame in frames:
         for stroke in frame.strokes.values():
             p = PlanarStroke(stroke, camera)
@@ -645,12 +669,10 @@ def solveContours():
     # get the camera info
     camera = Camera(bpy.context.scene.camera)
     
-    # idea 2
     # build a list of what intersections affect what strokes:
     planarStrokes, intersectionMarkers = getStrokeData(camera)    # - build a dict of intersections and a dict of strokes
     print('found ', len(planarStrokes), ' planar strokes, ', len(intersectionMarkers), ' intersection markers')
-    
-    
+        
     # check intersections and fill in intersection data
     for i in range(len(intersectionMarkers)):
         #print ('checking marker', i)
@@ -665,10 +687,14 @@ def solveContours():
     # check that we found anything at all                
     if len(planarStrokes)<2: raise(Exception('Not enough planar strokes found: '+ str(len(planarStrokes))) )
     
-    
     # ok, so, refactored version would be:
     clusters = getClusters(planarStrokes)  # create clusters of all directly-connected axial strokes
-   
+    print ('calculated clusters')
+
+    for stroke in planarStrokes:
+        stroke.highlightIfDisconnected()
+
+
     # then for each cluster:
     #   measure how many nodes we can define if we propogate outwards, for each cluster (I guess a recursive 'potential connections' checker that can be reused?) this alternates between axial and arbitrary?
     
