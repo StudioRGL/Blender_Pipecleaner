@@ -78,7 +78,13 @@ class PlanarStrokeCluster():
     
     def __repr__(self):
         """The print statement"""
-        return ('PlanarStrokeCluster with ' + str(len(self.strokes)) + ' strokes')
+        return ('PlanarStrokeCluster with ' + str(len(self.strokes)) + ' strokes and ' + str(len(self.potentialConnections)) + ' potential connections')
+
+    def __lt__(self, other):
+        """ the one with less connections is less"""
+        s = len(self.potentialConnections)
+        l = len(other.potentialConnections)
+        return s < l
 
 
     def mostConnectedStroke(self):
@@ -98,9 +104,9 @@ class PlanarStrokeCluster():
         i = 0
         while i < MAX_ITERATIONS:
             i +=1
-
+            newConnections = []
+            
             for strokeType in [StrokeType.planar_arbitrary, StrokeType.planar_axial]:
-                newConnections = []
                 for stroke in answer:
                     # ok, check all the connected strokes of our new type
                     for iStroke in stroke.allConnectedPlanarStrokes(strokeTypes = [strokeType], connectionList=answer+newConnections):
@@ -122,11 +128,11 @@ class PlanarStrokeCluster():
                                     break
                         else:
                             raise(Exception("Unexpected stroke type!"))
-                if len(newConnections)>0:
-                    # if we got any new ones
-                    answer+=newConnections
-                else:
-                    break # nothing to see here, think we got em all!
+            if len(newConnections)>0:
+                # if we got any new ones
+                answer+=newConnections
+            else:
+                break # nothing to see here, think we got em all!
         return answer
 
 
@@ -702,8 +708,13 @@ def solveContours():
     # then for each cluster:
     #   measure how many nodes we can define if we propogate outwards, for each cluster (I guess a recursive 'potential connections' checker that can be reused?) this alternates between axial and arbitrary?
     
-    # sort them by connectedness
+    clusters.sort() # sort them by connectedness
+    clusters.reverse()
+
     # for each cluster in order
+    for cluster in clusters:
+        print(cluster)
+    
     #   if it isn't yet connected:
     #       pick the most connected stroke of the 'best' cluster from the undefined clusters list
     
