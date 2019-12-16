@@ -69,8 +69,10 @@ class AxialPlanarStrokeCluster():
     
     def __init__(self, firstStroke):
         """initialise. We give it one stroke and it should connect the dots"""
-        self.strokes = firstStroke.connectedPlanarStrokes(strokeTypes=[StrokeType.planar_axial])
-
+        #self.strokes = [firstStroke] # should it be a set? those can't be mutable, though
+        self.strokes = firstStroke.allConnectedPlanarStrokes(strokeTypes=[StrokeType.planar_axial], connectionList = [firstStroke]) # how to make sure these are not in the cluster already!?
+        pass
+        # we DON'T need to give it existing clusters because all strokes in that cluster would already be in a cluster
         # now go through all connected strokes, and add them to the cluster
         #           get every AXIAL planar stroke attached to it recursively, and add them to the cluster (stop at ARBITRARY planar strokes)
     
@@ -402,7 +404,7 @@ class PlanarStroke(Stroke):
 
         self.hasBeenDefined = True #whoop
     
-    def planarIntersections(self):
+    def directlyConnectedPlanarStrokes(self):
         """return the planar strokes intersecting with markers intersecting with this that aren't this"""
         answer = []
         for marker in self.intersections: # all strokes intersecting with a planar stroke are MARKERS
@@ -412,15 +414,14 @@ class PlanarStroke(Stroke):
                     answer.append(intersectingStroke)
         return answer
 
-    def connectedPlanarStrokes(self, strokeTypes = [StrokeType.planar_axial], connectionList = []):
+    def allConnectedPlanarStrokes(self, strokeTypes = [StrokeType.planar_axial], connectionList = []):
         """recursively returns connected strokes with the following types"""
-    
-        # go through all strokes connected to the markers
-        for intersectingStroke in self.planarIntersections():
-            if intersectingStroke not in connectionList: # ok, it's not us, and it hasn't already been done
+        # go through all strokes to this one
+        for intersectingStroke in self.directlyConnectedPlanarStrokes():
+            if intersectingStroke not in connectionList: # ok, if it hasn't already been done
                 if intersectingStroke.strokeType() in strokeTypes:
                     connectionList.append(intersectingStroke)
-                    connectionList.append(intersectingStroke.connectedPlanarStrokes(strokeTypes = strokeTypes, connectionList = connectionList))                         # do all connecting strokes? recurse...
+                    connectionList = intersectingStroke.allConnectedPlanarStrokes(strokeTypes = strokeTypes, connectionList = connectionList[:])                       # do all connecting strokes? recurse...
                     
                 pass
             pass
@@ -531,7 +532,7 @@ def getClusters(planarStrokes):
             newCluster = AxialPlanarStrokeCluster(planarStroke) #           create a cluster, populate it
             clusters.append(newCluster)
 
-    print ('done.')
+    print ('done, found', len(clusters), ' clusters')
     return clusters
 
 def recursivelyReplane(replaneStroke):
@@ -661,7 +662,7 @@ def solveContours():
     # for arbitrary planar strokes, all parents must be from one cluster
     
     
-    #connectedStrokes = (planarStrokes[0].connectedPlanarStrokes())
+    #connectedStrokes = (planarStrokes[0].allConnectedPlanarStrokes())
     #print (len(connectedStrokes), 'strokes connected')
 
     # temp hack disable
