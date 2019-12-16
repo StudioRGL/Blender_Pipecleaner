@@ -1,7 +1,7 @@
 {
     "python.pythonPath": "C:\\Users\\davef\\AppData\\Local\\Programs\\Python\\Python37\\python.exe",
     "python.linting.enabled": true,
-    "python.linting.pylintEnabled": false,
+    "python.linting.pylintEnabled": true,
     "python.linting.flake8Enabled": false,
-    "python.linting.banditEnabled": true
+    "python.linting.banditEnabled": false
 }
