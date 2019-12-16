@@ -63,14 +63,15 @@ class Camera():
 
 
 # -------------------------------------------------------------------------------------------------------
-class AxialPlanarStrokeCluster():
+class PlanarStrokeCluster():
     """Contains a load of AXIAL, PLANAR strokes which are (directly or indirectly) connnected to each other
     as well references to all the Arbitrary planar strokes"""
     
     def __init__(self, firstStroke):
-        """initialise. We give it one stroke and it should connect the dots"""
+        """initialise from just Axial Planar Strokes. We give it one stroke and it should connect the dots"""
         #self.strokes = [firstStroke] # should it be a set? those can't be mutable, though
-        self.strokes = firstStroke.allConnectedPlanarStrokes(strokeTypes=[StrokeType.planar_axial], connectionList = [firstStroke]) # how to make sure these are not in the cluster already!?
+        self.strokes = [firstStroke]
+        self.strokes += firstStroke.allConnectedPlanarStrokes(strokeTypes=[StrokeType.planar_axial], connectionList = [firstStroke]) # how to make sure these are not in the cluster already!?
         pass
         # we DON'T need to give it existing clusters because all strokes in that cluster would already be in a cluster
         # now go through all connected strokes, and add them to the cluster
@@ -78,7 +79,35 @@ class AxialPlanarStrokeCluster():
     
     def __repr__(self):
         """The print statement"""
-        return ('AxialPlanarStrokeCluster with ' + str(len(self.strokes)) + ' strokes')
+        return ('PlanarStrokeCluster with ' + str(len(self.strokes)) + ' strokes')
+
+    def mostConnectedStroke(self):
+        self.strokes.sort()
+        self.strokes.reverse()
+        if len(self.strokes)>0:
+            return self.strokes[0]
+        else:
+            raise(Exception("could not get 'most connected stroke' from empty stroke cluster"))
+
+    def indirectlyConnectedStrokes(self):
+        """ alternately expands by ARBITRARY strokes (need 3 connections) and AXIAL strokes (need 1 connection) until we don't get any more"""
+        indirectlyConnectedStrokes = self.strokes # initialize it
+        
+        prevNStrokes = len(indirectlyConnectedStrokes)
+        for strokeType in [StrokeType.planar_arbitrary, StrokeType.planar_axial]:
+            newConnections = []
+            for stroke in indirectlyConnectedStrokes:
+                pass
+            pass
+            if len(newConnections>0):
+                # if we got any new ones
+                indirectlyConnectedStrokes+=newConnections
+            else:
+                break # nothing to see here, think we got em all!
+
+
+
+
 
 
 # -------------------------------------------------------------------------------------------------------
@@ -417,16 +446,17 @@ class PlanarStroke(Stroke):
     def allConnectedPlanarStrokes(self, strokeTypes = [StrokeType.planar_axial], connectionList = []):
         """recursively returns connected strokes with the following types"""
         # go through all strokes to this one
+        newConnectionList = []
         for intersectingStroke in self.directlyConnectedPlanarStrokes():
             if intersectingStroke not in connectionList: # ok, if it hasn't already been done
                 if intersectingStroke.strokeType() in strokeTypes:
-                    connectionList.append(intersectingStroke)
-                    connectionList = intersectingStroke.allConnectedPlanarStrokes(strokeTypes = strokeTypes, connectionList = connectionList[:])                       # do all connecting strokes? recurse...
+                    newConnectionList.append(intersectingStroke)
+                    newConnectionList += intersectingStroke.allConnectedPlanarStrokes(strokeTypes = strokeTypes, connectionList = connectionList+newConnectionList)  # recurse
                     
                 pass
             pass
 
-        return connectionList
+        return newConnectionList
 
 # -------------------------------------------------------------------------------------------------------
 
@@ -521,16 +551,16 @@ def getClusters(planarStrokes):
 
     clusters = []
     for planarStroke in planarStrokes: # then for every AXIAL planar stroke
-        pass
-        #   is the stroke in any existing cluster?
-        strokeInCluster = False
-        for cluster in clusters:
-            if planarStroke in cluster.strokes:
-                strokeInCluster = True
-                break
-        if strokeInCluster == False: #       if not:
-            newCluster = AxialPlanarStrokeCluster(planarStroke) #           create a cluster, populate it
-            clusters.append(newCluster)
+        if planarStroke.strokeType()==StrokeType.planar_axial:
+            #   is the stroke in any existing cluster?
+            strokeInCluster = False
+            for cluster in clusters:
+                if planarStroke in cluster.strokes:
+                    strokeInCluster = True
+                    break
+            if strokeInCluster == False: #       if not:
+                newCluster = PlanarStrokeCluster(planarStroke) #           create a cluster, populate it
+                clusters.append(newCluster)
 
     print ('done, found', len(clusters), ' clusters')
     return clusters
@@ -637,16 +667,8 @@ def solveContours():
     
     
     # ok, so, refactored version would be:
-    clusters = getClusters(planarStrokes)
-    x = 1
-    # create clusters of all directly-connected axial strokes by :
-    # pick a stroke
-    # then for every AXIAL planar stroke
-    #   is the stroke in any existing group?
-    #       if not:
-    #           create a cluster
-    #           get every AXIAL planar stroke attached to it recursively, and add them to the cluster (stop at ARBITRARY planar strokes)
-    
+    clusters = getClusters(planarStrokes)  # create clusters of all directly-connected axial strokes
+   
     # then for each cluster:
     #   measure how many nodes we can define if we propogate outwards, for each cluster (I guess a recursive 'potential connections' checker that can be reused?) this alternates between axial and arbitrary?
     
