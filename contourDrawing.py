@@ -93,36 +93,40 @@ class PlanarStrokeCluster():
     def indirectlyConnectedStrokes(self):
         """ alternately expands by ARBITRARY strokes (need 3 connections) and AXIAL strokes (need 1 connection) until we don't get any more"""
         answer = self.strokes[:] # initialize it
-        
-        prevNStrokes = len(answer)
-        for strokeType in [StrokeType.planar_arbitrary, StrokeType.planar_axial]:
-            newConnections = []
-            for stroke in answer:
-                # ok, check all the connected strokes of our new type
-                for iStroke in stroke.allConnectedPlanarStrokes(strokeTypes = [strokeType], connectionList=answer):
-                    # the number of required connections depends on the type of stroke
-                    if strokeType==StrokeType.planar_axial: # just needs one connection
-                        # well, just add it on
-                        answer.append(iStroke)
-                    elif strokeType==StrokeType.planar_arbitrary: # needs 3 connections
-                        # check how many connections it has in the current group
-                        connectionCount = 0
-                        for connector in iStroke.adjacentPlanarStrokes():
-                            if connector in answer:
-                                connectionCount+=1
-                            if connectionCount>=3:
-                                # we got it! whoo!
-                                answer.append(iStroke)
-                                break
-                    else:
-                        raise(Exception("Unexpected stroke type!"))
-                pass
-            pass
-            if len(newConnections)>0:
-                # if we got any new ones
-                answer+=newConnections
-            else:
-                break # nothing to see here, think we got em all!
+
+        MAX_ITERATIONS = 9999 # hmmmm not sure this is good coding practise?
+        i = 0
+        while i < MAX_ITERATIONS:
+            i +=1
+
+            for strokeType in [StrokeType.planar_arbitrary, StrokeType.planar_axial]:
+                newConnections = []
+                for stroke in answer:
+                    # ok, check all the connected strokes of our new type
+                    for iStroke in stroke.allConnectedPlanarStrokes(strokeTypes = [strokeType], connectionList=answer+newConnections):
+                        if iStroke in answer or iStroke in newConnections:
+                            continue  # we got it, we got it
+                        # the number of required connections depends on the type of stroke
+                        if strokeType==StrokeType.planar_axial: # just needs one connection
+                            # well, just add it on
+                            newConnections.append(iStroke)
+                        elif strokeType==StrokeType.planar_arbitrary: # needs 3 connections
+                            # check how many connections it has in the current group
+                            connectionCount = 0
+                            for connector in iStroke.adjacentPlanarStrokes():
+                                if connector in answer:
+                                    connectionCount+=1
+                                if connectionCount>=3:
+                                    # we got it! whoo!
+                                    newConnections.append(iStroke)
+                                    break
+                        else:
+                            raise(Exception("Unexpected stroke type!"))
+                if len(newConnections)>0:
+                    # if we got any new ones
+                    answer+=newConnections
+                else:
+                    break # nothing to see here, think we got em all!
         return answer
 
 
@@ -489,7 +493,7 @@ def getActiveGreasePencilObject():
     gp = bpy.context.active_object
     if gp.type != 'GPENCIL':
         raise(Exception("make sure you have a gpencil object active"))
-    return gpzz
+    return gp
     
 
 def getStrokeData(camera):
