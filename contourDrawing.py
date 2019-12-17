@@ -74,7 +74,7 @@ class PlanarStrokeCluster():
         self.strokes = [firstStroke]
         self.strokes += firstStroke.allConnectedPlanarStrokes(strokeTypes=[StrokeType.planar_axial], connectionList = [firstStroke]) # add all connected planar strokes
         # we DON'T need to give it existing clusters because all strokes in that cluster would already be in a cluster and by definition can't be connected to this one
-        self.potentialConnections = self.indirectlyConnectedStrokes()
+        self.potentialConnections = self.indirectlyConnectedStrokes() # TODO: is this still required really?
         
     
     def __repr__(self):
@@ -97,7 +97,7 @@ class PlanarStrokeCluster():
 
 
     def indirectlyConnectedStrokes(self):
-        """ alternately expands by ARBITRARY strokes (need 3 connections) and AXIAL strokes (need 1 connection) until we don't get any more"""
+        """ alternately expands by ARBITRARY strokes (need 3 connections) and AXIAL strokes (need 1 connection) until we don't get any more""" # TODO: remove this, it's replaced by replaneCluster
         answer = self.strokes[:] # initialize it
 
         MAX_ITERATIONS = 9999 # hmmmm not sure this is good coding practise?
@@ -134,6 +134,93 @@ class PlanarStrokeCluster():
             else:
                 break # nothing to see here, think we got em all!
         return answer
+
+    def replaneCluster(self, testOnly = False):
+        """ ok so this either tries to, or does, propogate from the mostConnectedStroke through the whole network, alternately doing rounds of axial and arbitrary strokes"""
+        firstStroke = self.mostConnectedStroke()
+
+        # set up the first stroke or it ain't gonna work!
+        firstStroke.origin = Vector((0,0,0))
+        firstStroke.rePlane()
+        
+        currentlyConnectedStrokes = [firstStroke]
+
+        MAX_ITERATIONS = 9999 # hmmmm not sure this is good coding practise?
+        i = 0
+
+        # we're gonna keep doing this until we stop getting new connections...
+        while i < MAX_ITERATIONS:
+            i += 1 # iterate the counter, just to be safe :-)
+
+            newlyConnectedStrokes = [] # keep track of what strokes have been added in this iteration - if we don't get any new ones then we got em all
+            for strokeType in [StrokeType.planar_axial, StrokeType.planar_arbitrary]: # alternate between doing axial and arbitrary strokes
+                for stroke in currentlyConnectedStrokes: # propogate outwards
+                    for potentialNewConnection in stroke.adjacentPlanarStrokes(): # get all the strokes attached to that one
+                        if potentialNewConnection in currentlyConnectedStrokes + newlyConnectedStrokes: # if they're not already connected (we have to check all, some will have multiple connections)
+                            continue # not break! we still wanna check the other potential connections
+                        else:
+                            # seems to be a new one!
+
+                            # replane, if we wanna
+                            if testOnly == False: 
+                                # TODO: REFACTOR SO ALL THE MATHS IS IN THE REPLANE FUNCTION ITSELF!
+                                # just CALL replane here and CHECK if it works!
+
+                                # stuff in here only happens in 'real' mode, not 'test' mode
+                                if potentialNewConnection.strokeType == StrokeType.planar_axial:  # if they're axial
+                                    # by definition, they must have at least 1 reasonable connection, to the current stroke - set it up!
+                                    # get shared marker (probably a bit slow, but who cares...)
+                                    sharedMarker = None
+                                    for marker in stroke.intersections.keys():  # this is going to be in key/value pairs, with key = object and value = polar coordinate
+                                        if potentialNewConnection in marker.intersections.keys():  # that's the one!
+                                            sharedMarker = marker
+                                    
+                                    if sharedMarker == None:
+                                        raise(Exception('Could not find shared marker between supposedly connected strokes!'))
+
+                                    # set the origin of the potential new connection to the cartesian coordinate of the intersection point
+                                    polarCoordinate = stroke.intersections[sharedMarker]  # where the angular line intersects with the replaneStroke's plane                                                            
+                                    p0 = stroke.cameraOrigin # p0, p1: define the line
+                                    p1 = Vector(polarToCartesian(1, polarCoordinate[0], polarCoordinate[1])) + stroke.cameraOrigin  # eh gotta get the xyz from the polar, dang. MAYBE CHECK - need to compensate for cam origin not being at zero so added it...?
+                                    p_co = stroke.origin # p_co is a point on the plane (plane coordinate).
+                                    p_no = stroke.normal #p_no is a normal vector defining the plane direction (does not need to be normalized).
+                                    #cartesianCoordinate = isect_line_plane_v3(p0, p1, p_co, p_no) # should not be none!
+                                    cartesianCoordinate = geometry.intersect_line_plane(p0, p1, p_co, p_no)
+                                    
+                                    # check we got it
+                                    if cartesianCoordinate==None:
+                                        raise(Exception("Intersection point = None! on stroke ", replaneStroke))
+
+                                    # ok, now we know the worldspace position of the intersection
+                                    potentialNewConnection.origin = cartesianCoordinate
+                                elif potentialNewConnection.strokeType == StrokeType.planar_arbitrary: # if they're arbitrary
+                                    # TEMP HACK CODE
+                                    # TODO fix!
+                                    # BETTER TO HAVE THIS IN THE STROKE ITSELF, AND JUST CALL REPLANE, AND IF IT WORKS IT WORKS
+                                    # THIS IS TOO COMPLICATED OTHERWISE!
+
+                                    # markerPosition_0 = Vector((0,0,0))
+                                    # markerPosition_1 = Vector((0,0,1))
+                                    # markerPosition_2 = Vector((1,0,0))
+                                    # markerNormal = 
+                                    # potentialNewConnection.normal = Vector((0,0,1)) # TEST HACK
+                                    # potentialNewConnection.origin = markerPosition_0
+                                    # check they have 3 connections
+                                    pass
+                                else:
+                                    raise(Exception("unknown stroke type in replaneCluster!"))
+                                # if so, connect em
+
+                            newlyConnectedStrokes.append(potentialNewConnection)    # add them to the list
+                pass
+            
+            if len(newlyConnectedStrokes)>0:
+                # if we got any new ones
+                currentlyConnectedStrokes += newlyConnectedStrokes # plop them on there
+            else:
+                break # nothing to see here, think we got em all!
+        
+        return currentlyConnectedStrokes
 
 
 
@@ -389,6 +476,8 @@ class PlanarStroke(Stroke):
         If it's an arbitrary plane, no normal has been specified, searches all intersecting planes to try to find 3 that have been placed!
         
         """
+
+        # TODO: there's a ton of duplication here, maybe leave everything that happens BETWEEN strokes in Cluster.replane? that would imply setting the normal there, maybe make a helper function
         
         # sanity checks
         if self.hasBeenPlaced:
@@ -612,65 +701,65 @@ def getClusters(planarStrokes):
     return clusters
 
 
-def recursivelyReplane(replaneStroke, finishedStrokes = []): # TODO add finishedStrokes, or remove it!
-    # we have all the info we need, so let's replane it
-    replaneStroke.rePlane()
-    newFinishedStrokes = []
-
-    if replaneStroke.hasBeenPlaced==False:
-        return newFinishedStrokes
-        #raise(Exception("Replaning stroke failed for unknown reason, sorry.")) # this should have been set to TRUE, unless the stroke didn't have enough connections. We can't go any further because this one hasn't been defined, maybe because it doesn't have enough connections?
-    
-    newFinishedStrokes.append(replaneStroke)
-
-    # ok, so otherwise, assuming it did get defined, now we're gonna go thru all the intersections on the replaneStroke, and set their origins
-    for intersection in replaneStroke.intersections.keys():
-        # ok, so these should only be _markers_, cos we didn't check strokes against strokes
-        marker = intersection # get the marker
-        polarCoordinate = replaneStroke.intersections[intersection] # get the coordinate from the dict
-
-        # where the angular line intersects with the replaneStroke's plane                
-        p0 = replaneStroke.cameraOrigin # p0, p1: define the line
-        p1 = Vector(polarToCartesian(1, polarCoordinate[0], polarCoordinate[1])) + replaneStroke.cameraOrigin  # eh gotta get the xyz from the polar, dang. MAYBE CHECK - need to compensate for cam origin not being at zero so added it...?
-        p_co = replaneStroke.origin # p_co is a point on the plane (plane coordinate).
-        p_no = replaneStroke.normal #p_no is a normal vector defining the plane direction (does not need to be normalized).
-        #cartesianCoordinate = isect_line_plane_v3(p0, p1, p_co, p_no) # should not be none!
-        cartesianCoordinate = geometry.intersect_line_plane(p0, p1, p_co, p_no)
-        
-        # ok, now we know the worldspace position of the intersection
-        # need to also store this coordinate on the MARKER?
-        if cartesianCoordinate==None:
-            raise(Exception("Intersection point = None! on stroke ", replaneStroke))
-                  
-        for childStroke in marker.intersections: # go through all the children of the marker
-            if childStroke.hasBeenPlaced: # check if the child has already been replaned
-                continue# if it has, skip it (could probably improve this at some point!)
-            else: # otherwise, set the grandchild's origin to be the intersectionPoint 
-                childStroke.origin = cartesianCoordinate # whoop set the plane origin to the interseciton point
-                # hmmm, if we're setting plane origin here, maybe we should also do all the normal calculations here. but might make sense the other way round?
-                # yeah should probably do this in the child right? urgh except then it ends up being depth-first
-    
-    # rather than directly setting the origins of all connected strokes as soon as we hit each marker, we need to do something different for 
-    # the arbitrary-plane strokes, since they need 3 coordinates.
-    # how about:
-    # TODO
-
-    # we're doing this in a separate loop so we go breadth-first instead of depth-first
-    # for every intersection
-    for marker in replaneStroke.intersections.keys():
-        for childStroke in marker.intersections: # go through all the children of the marker
-            if childStroke.hasBeenPlaced == False: # check if the child's depth has already been set
-                if childStroke.origin == None:# (if it hasn't already been set)
-                    raise(Exception("Plane origin of child somehow hasn't been set?"))
-                
-                recursivelyReplane(childStroke)# move onto the child and recursively replane
-                
-        
-    # todo: ok, so if we store the angular positions of all intersections (in pairs, with the intersected object)
-    # we can look at where they intersect the plane of the parent, and that's simply the origin
-    
-    
-    pass
+#def recursivelyReplane(replaneStroke, finishedStrokes = []): # TODO add finishedStrokes, or remove it!
+#    # we have all the info we need, so let's replane it
+#    replaneStroke.rePlane()
+#    newFinishedStrokes = []
+#
+#    if replaneStroke.hasBeenPlaced==False:
+#        return newFinishedStrokes
+#        #raise(Exception("Replaning stroke failed for unknown reason, sorry.")) # this should have been set to TRUE, unless the stroke didn't have enough connections. We can't go any further because this one hasn't been defined, maybe because it doesn't have enough connections?
+#    
+#    newFinishedStrokes.append(replaneStroke)
+#
+#    # ok, so otherwise, assuming it did get defined, now we're gonna go thru all the intersections on the replaneStroke, and set their origins
+#    for intersection in replaneStroke.intersections.keys():
+#        # ok, so these should only be _markers_, cos we didn't check strokes against strokes
+#        marker = intersection # get the marker
+#        polarCoordinate = replaneStroke.intersections[intersection] # get the coordinate from the dict
+#
+#        # where the angular line intersects with the replaneStroke's plane                
+#        p0 = replaneStroke.cameraOrigin # p0, p1: define the line
+#        p1 = Vector(polarToCartesian(1, polarCoordinate[0], polarCoordinate[1])) + replaneStroke.cameraOrigin  # eh gotta get the xyz from the polar, dang. MAYBE CHECK - need to compensate for cam origin not being at zero so added it...?
+#        p_co = replaneStroke.origin # p_co is a point on the plane (plane coordinate).
+#        p_no = replaneStroke.normal #p_no is a normal vector defining the plane direction (does not need to be normalized).
+#        #cartesianCoordinate = isect_line_plane_v3(p0, p1, p_co, p_no) # should not be none!
+#        cartesianCoordinate = geometry.intersect_line_plane(p0, p1, p_co, p_no)
+#        
+#        # ok, now we know the worldspace position of the intersection
+#        # need to also store this coordinate on the MARKER?
+#        if cartesianCoordinate==None:
+#            raise(Exception("Intersection point = None! on stroke ", replaneStroke))
+#                  
+#        for childStroke in marker.intersections: # go through all the children of the marker
+#            if childStroke.hasBeenPlaced: # check if the child has already been replaned
+#                continue# if it has, skip it (could probably improve this at some point!)
+#            else: # otherwise, set the grandchild's origin to be the intersectionPoint 
+#                childStroke.origin = cartesianCoordinate # whoop set the plane origin to the intersection point
+#                # hmmm, if we're setting plane origin here, maybe we should also do all the normal calculations here. but might make sense the other way round?
+#                # yeah should probably do this in the child right? urgh except then it ends up being depth-first
+#    
+#    # rather than directly setting the origins of all connected strokes as soon as we hit each marker, we need to do something different for 
+#    # the arbitrary-plane strokes, since they need 3 coordinates.
+#    # how about:
+#    # TODO
+#
+#    # we're doing this in a separate loop so we go breadth-first instead of depth-first
+#    # for every intersection
+#    for marker in replaneStroke.intersections.keys():
+#        for childStroke in marker.intersections: # go through all the children of the marker
+#            if childStroke.hasBeenPlaced == False: # check if the child's depth has already been set
+#                if childStroke.origin == None:# (if it hasn't already been set)
+#                    raise(Exception("Plane origin of child somehow hasn't been set?"))
+#                
+#                recursivelyReplane(childStroke)# move onto the child and recursively replane
+#                
+#        
+#    # todo: ok, so if we store the angular positions of all intersections (in pairs, with the intersected object)
+#    # we can look at where they intersect the plane of the parent, and that's simply the origin
+#    
+#    
+#    pass
 
 def flattenAll():
     """ just for testing really?"""
@@ -700,7 +789,7 @@ def solveContours():
     planarStrokes, intersectionMarkers = getStrokeData(camera)    # - build a dict of intersections and a dict of strokes
     print('found ', len(planarStrokes), ' planar strokes, ', len(intersectionMarkers), ' intersection markers')
         
-    # check intersections and fill in intersection data
+    # check screen-space intersections and fill in intersection data
     for i in range(len(intersectionMarkers)):
         #print ('checking marker', i)
         for j in range(len(planarStrokes)):
@@ -718,8 +807,8 @@ def solveContours():
     clusters = getClusters(planarStrokes)  # create clusters of all directly-connected axial strokes
     print ('calculated clusters')
 
-    for stroke in planarStrokes:
-        stroke.highlightIfDisconnected()
+    #for stroke in planarStrokes:
+    #    stroke.highlightIfDisconnected()
 
 
     # then for each cluster:
@@ -732,10 +821,11 @@ def solveContours():
     for cluster in clusters:
         print(cluster)
         #   if it isn't yet connected:
-        if cluster.strokes[0].hasBeenPlaced == False:               # there should always be at least one stroke in a cluster, since it's required to init one!
-            clusterStartStroke = cluster.mostConnectedStroke()       # pick the most connected stroke of the 'best' cluster from the undefined clusters list
-            clusterStartStroke.origin = Vector((0,0,0))         # TODO: this should only be done for the first stroke in the chain, and this isn't a good way of doing that
-            recursivelyReplane(clusterStartStroke)                   # do the big thing until we run outta strokes
+        if cluster.strokes[0].hasBeenPlaced == False:               # there should always be at least one stroke in a cluster, since it's required to init one! and if one has been placed, they've all been placed
+            #clusterStartStroke = cluster.mostConnectedStroke()       # pick the most connected stroke of the 'best' cluster from the undefined clusters list
+            #clusterStartStroke.origin = Vector((0,0,0))         # TODO: this should only be done for the first stroke in the chain, and this isn't a good way of doing that
+            #recursivelyReplane(clusterStartStroke)                   # do the big thing until we run outta strokes
+            cluster.replaneCluster()
             # hey, we done!
             #   propogate definitions outwards from that (using potential connection checker alternately on axial and arbitrary planar strokes until we don't get any more)
                 # connect that one
