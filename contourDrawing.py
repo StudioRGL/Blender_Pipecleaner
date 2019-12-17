@@ -601,14 +601,20 @@ def getClusters(planarStrokes):
 
 
 def recursivelyReplane(replaneStroke):
-    if replaneStroke.hasBeenDefined == False and replaneStroke.planeOrigin==None:
-        replaneStroke.planeOrigin = Vector((0,0,0)) # TODO: this should only be done for the first stroke in the chain, and this isn't a good way of doing that
-    
+    # sanity checks
+    if replaneStroke.hasBeenDefined:
+        raise(Exception("Stroke has already been defined!"))
+    if replaneStroke.strokeType == StrokeType.planar_axial:
+        if replaneStroke.planeOrigin == None:
+            raise(Exception("Can't define axial planar stroke - we don't know its origin!"))
+    if replaneStroke.normal == None:
+        raise(Exception("Can't define planar stroke, we don't know its normal"))
+
     # we have all the info we need, so let's replane it
     replaneStroke.rePlane() 
     
     if replaneStroke.hasBeenDefined==False:
-        return # we can't go any further because this one hasn't been defined, maybe because it doesn't have enough connections?
+        raise(Exception("Replaning stroke failed for unknown reason, sorry.")) # this should have been set to TRUE, unless the stroke didn't have enough connections. We can't go any further because this one hasn't been defined, maybe because it doesn't have enough connections?
         
     # ok, so otherwise, assuming it did get defined, now we're gonna go thru all the intersections on the replaneStroke, and set their origins
     for intersection in replaneStroke.intersections.keys():
@@ -708,55 +714,29 @@ def solveContours():
     # then for each cluster:
     #   measure how many nodes we can define if we propogate outwards, for each cluster (I guess a recursive 'potential connections' checker that can be reused?) this alternates between axial and arbitrary?
     
-    clusters.sort() # sort them by connectedness
-    clusters.reverse()
+    clusters.sort(reverse=True) # sort them by connectedness
 
+    print("Replaning strokes")
     # for each cluster in order
     for cluster in clusters:
         print(cluster)
-    
-    #   if it isn't yet connected:
-    #       pick the most connected stroke of the 'best' cluster from the undefined clusters list
-    
-    #   propogate definitions outwards from that (using potential connection checker alternately on axial and arbitrary planar strokes until we don't get any more)
-    #   for all remaining clusters:
-    #       if any are now definied, remove them from the list
-    #   loop
-    # for arbitrary planar strokes, all parents must be from one cluster
-    
-    
-    #connectedStrokes = (planarStrokes[0].allConnectedPlanarStrokes())
-    #print (len(connectedStrokes), 'strokes connected')
+        #   if it isn't yet connected:
+        if cluster.strokes[0].hasBeenDefined == False:               # there should always be at least one stroke in a cluster, since it's required to init one!
+            clusterStartStroke = cluster.mostConnectedStroke()       # pick the most connected stroke of the 'best' cluster from the undefined clusters list
+            clusterStartStroke.planeOrigin = Vector((0,0,0))         # TODO: this should only be done for the first stroke in the chain, and this isn't a good way of doing that
+            recursivelyReplane(clusterStartStroke)                   # do the big thing until we run outta strokes
+            # hey, we done!
+            #   propogate definitions outwards from that (using potential connection checker alternately on axial and arbitrary planar strokes until we don't get any more)
+                # connect that one
+                # recurse for all it's children
+                
+
+        # note: for arbitrary planar strokes, all parents must be from one cluster
 
     # temp hack disable
     return
-    
-    
-    
-
-
 
     
-    # prioritize the strokes - the one with the most intersections is the most important I guess? then by number of points? then by index?
-    planarStrokes.sort()
-    planarStrokes.reverse() # start with the one with most intersections, then recurse through each one
-
-    # go through all the strokes, starting with the most connected one, and replane every child stroke of that stroke
-    # in its current form, this means each will only be visited once per chain? So may need multiple loops through  
-    for stroke in planarStrokes:
-        if stroke.hasBeenDefined == False:
-            #print('Recursing stroke: ' + str(stroke))
-            recursivelyReplane(stroke) # chain through all strokes that are connected to this one
-    
-    # ok, let's have a look and see what happened
-    for stroke in planarStrokes:
-    #    print(stroke, 'has been defined: ', stroke.hasBeenDefined)
-        if stroke.hasBeenDefined == False:
-            print ('intersections:')
-            print (stroke.intersections)
-    
-
-
 
 #flattenAll()
 solveContours()
