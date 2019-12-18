@@ -48,6 +48,12 @@ def averageVectors(vectorList):
         answer += v/nVectors    
     return answer
 
+def colinear(p0, p1, p2):
+    """from https://stackoverflow.com/questions/9608148/python-script-to-determine-if-x-y-coordinates-are-colinear-getting-some-e"""
+    x1, y1 = p1[0] - p0[0], p1[1] - p0[1]
+    x2, y2 = p2[0] - p0[0], p2[1] - p0[1]
+    return abs(x1 * y2 - x2 * y1) < 1e-12
+
 # -------------------------------------------------------------------------------------------------------  
 class StrokeType(Enum):
     marker           = 0
@@ -526,7 +532,17 @@ class PlanarStroke(Stroke):
                 testPoints = anchorPoints[:3] # should work, right!
                 v1 = testPoints[1] - testPoints[0]
                 v2 = testPoints[2] - testPoints[0]
-                self.normal = v1.cross(v2)
+
+
+                cross = v1.cross(v2)
+                if cross.length <= 0.00001: # sure, could use better epsilon, but the result's gonna be rubbish even if they're only *almost* colinear
+                    raise(Exception('Points are colinear, oh no')) # TODO: do something useful instead of crashing
+                # check they're not colinear
+                c = colinear(testPoints[0], testPoints[1], testPoints[2])
+                # 
+
+
+                self.normal = cross
 
             # set the origin (this is the same for both arbitrary and axial planar strokes)
             self.origin = averageVectors(anchorPoints) # I thiiink that's right?
