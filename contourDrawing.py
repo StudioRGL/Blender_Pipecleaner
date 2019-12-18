@@ -576,9 +576,9 @@ class PlanarStroke(Stroke):
             pass
         return newConnectionList
 
-    def highlightIfDisconnected(self):
+    def highlight(self, select = True):
         if len(self.adjacentPlanarStrokes())==0: # we got nothin'
-            self.gpStroke.select = True
+            self.gpStroke.select = select
 
                  
 
@@ -613,7 +613,7 @@ def getStrokeData(camera):
                 currentFrameFound = True
                 strokes = frame.strokes.values()
                 for stroke in strokes:
-                    nPoints =  len(stroke.points.values())
+                    #nPoints =  len(stroke.points.values())
                     #print ('checking curve with ', nPoints, ' points') 
                     
                     
@@ -622,7 +622,7 @@ def getStrokeData(camera):
                     itsAMarker = False
                     # check material
                     materialIndex = stroke.material_index
-                    if materialIndex == gp.data.materials.keys().index('contour_intersection') or nPoints < INTERSECTION_MARKER_THRESHOLD:
+                    if materialIndex == gp.data.materials.keys().index('contour_intersection'): # or nPoints < INTERSECTION_MARKER_THRESHOLD: # TODO: set up separate marker detection based on bbox
                         # it's an intersection marker
                         # set the material (maybe redundant)
                         itsAMarker = True
@@ -767,7 +767,12 @@ def solveContours():
                 
         # note: for arbitrary planar strokes, all parents must be from one cluster
 
-    # temp hack disable
+    # select all strokes not joined to the first cluster
+    for i in range(len(clusters)):
+        select = i!=0
+        for stroke in clusters[i].strokes:
+            stroke.highlight(select=select)
+
     return
 
     

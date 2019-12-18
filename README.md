@@ -7,7 +7,11 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 
 - [x] add sort function to clusters
 - [x] implement cluster-based population
-- [ ] add arbitrary planes support
+- [x] add arbitrary planes support
+- [ ] make sure it works with colinear points (or rather, fails gracefully)
+- [ ] make proper averaging for arbitrary planes?
+- [ ] deal with locked/hidden layers?
+- [ ] doesn't always seem to reliably deal with intersections?
 - [ ] add materials generation
 - [ ] add operator for 'generate materials'
 - [ ] add operator for 'set strokes below threshold to intersectionMarkers'
@@ -16,7 +20,3 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 - [ ] add addon stuff
 
 
-#planeOrigin -> origin, and make it a property of all strokes (markers as well)
-#hasbeendefined should 
-# remove setnormal?
-gonna try moving indirectly-connected-strokes into recursively-replane and adding a test mode
