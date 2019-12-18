@@ -40,6 +40,14 @@ def degreesToFirstPositiveDegrees(angle):
         answer += 360
     return answer
 
+def averageVectors(vectorList):
+    """Return the (component-wise) average of the input vector list"""
+    answer = Vector()
+    nVectors = len(vectorList)
+    for v in vectorList:
+        answer += v/nVectors    
+    return answer
+
 # -------------------------------------------------------------------------------------------------------  
 class StrokeType(Enum):
     marker           = 0
@@ -140,78 +148,37 @@ class PlanarStrokeCluster():
         firstStroke = self.mostConnectedStroke()
 
         # set up the first stroke or it ain't gonna work!
-        firstStroke.origin = Vector((0,0,0))
-        firstStroke.rePlane()
         
+        successfullyReplaned = firstStroke.rePlane()
+        if not successfullyReplaned:
+            raise(Exception("Could not replane first stroke "))
         currentlyConnectedStrokes = [firstStroke]
 
         MAX_ITERATIONS = 9999 # hmmmm not sure this is good coding practise?
         i = 0
 
+        # ok we're gonna keep expanding outwards, alternatley by axial strokes (1 connection required) and arbitrary strokes (3 connections required)
         # we're gonna keep doing this until we stop getting new connections...
         while i < MAX_ITERATIONS:
             i += 1 # iterate the counter, just to be safe :-)
 
             newlyConnectedStrokes = [] # keep track of what strokes have been added in this iteration - if we don't get any new ones then we got em all
             for strokeType in [StrokeType.planar_axial, StrokeType.planar_arbitrary]: # alternate between doing axial and arbitrary strokes
-                for stroke in currentlyConnectedStrokes: # propogate outwards
-                    for potentialNewConnection in stroke.adjacentPlanarStrokes(): # get all the strokes attached to that one
-                        if potentialNewConnection in currentlyConnectedStrokes + newlyConnectedStrokes: # if they're not already connected (we have to check all, some will have multiple connections)
-                            continue # not break! we still wanna check the other potential connections
-                        else:
+                for stroke in currentlyConnectedStrokes: # this will increase (hopefully) on each iteration
+                    for potentialNewConnection in stroke.adjacentPlanarStrokes(): # get all the strokes directly attached to the current one
+                        if potentialNewConnection not in currentlyConnectedStrokes + newlyConnectedStrokes: # if they're not already connected (some will have multiple connections, and we don't wanna repeat)
                             # seems to be a new one!
 
                             # replane, if we wanna
-                            if testOnly == False: 
-                                # TODO: REFACTOR SO ALL THE MATHS IS IN THE REPLANE FUNCTION ITSELF!
-                                # just CALL replane here and CHECK if it works!
+                            if testOnly == False:    # NO TODO: need to allow this even in testOnly mode!
+                                # ok, so the simpler version is to just 'try to replane' here, if it works it works
+                                successfullyReplaned = potentialNewConnection.rePlane(connectedStrokes = currentlyConnectedStrokes+newlyConnectedStrokes, testOnly = testOnly)
 
-                                # stuff in here only happens in 'real' mode, not 'test' mode
-                                if potentialNewConnection.strokeType == StrokeType.planar_axial:  # if they're axial
-                                    # by definition, they must have at least 1 reasonable connection, to the current stroke - set it up!
-                                    # get shared marker (probably a bit slow, but who cares...)
-                                    sharedMarker = None
-                                    for marker in stroke.intersections.keys():  # this is going to be in key/value pairs, with key = object and value = polar coordinate
-                                        if potentialNewConnection in marker.intersections.keys():  # that's the one!
-                                            sharedMarker = marker
-                                    
-                                    if sharedMarker == None:
-                                        raise(Exception('Could not find shared marker between supposedly connected strokes!'))
-
-                                    # set the origin of the potential new connection to the cartesian coordinate of the intersection point
-                                    polarCoordinate = stroke.intersections[sharedMarker]  # where the angular line intersects with the replaneStroke's plane                                                            
-                                    p0 = stroke.cameraOrigin # p0, p1: define the line
-                                    p1 = Vector(polarToCartesian(1, polarCoordinate[0], polarCoordinate[1])) + stroke.cameraOrigin  # eh gotta get the xyz from the polar, dang. MAYBE CHECK - need to compensate for cam origin not being at zero so added it...?
-                                    p_co = stroke.origin # p_co is a point on the plane (plane coordinate).
-                                    p_no = stroke.normal #p_no is a normal vector defining the plane direction (does not need to be normalized).
-                                    #cartesianCoordinate = isect_line_plane_v3(p0, p1, p_co, p_no) # should not be none!
-                                    cartesianCoordinate = geometry.intersect_line_plane(p0, p1, p_co, p_no)
-                                    
-                                    # check we got it
-                                    if cartesianCoordinate==None:
-                                        raise(Exception("Intersection point = None! on stroke ", replaneStroke))
-
-                                    # ok, now we know the worldspace position of the intersection
-                                    potentialNewConnection.origin = cartesianCoordinate
-                                elif potentialNewConnection.strokeType == StrokeType.planar_arbitrary: # if they're arbitrary
-                                    # TEMP HACK CODE
-                                    # TODO fix!
-                                    # BETTER TO HAVE THIS IN THE STROKE ITSELF, AND JUST CALL REPLANE, AND IF IT WORKS IT WORKS
-                                    # THIS IS TOO COMPLICATED OTHERWISE!
-
-                                    # markerPosition_0 = Vector((0,0,0))
-                                    # markerPosition_1 = Vector((0,0,1))
-                                    # markerPosition_2 = Vector((1,0,0))
-                                    # markerNormal = 
-                                    # potentialNewConnection.normal = Vector((0,0,1)) # TEST HACK
-                                    # potentialNewConnection.origin = markerPosition_0
-                                    # check they have 3 connections
-                                    pass
-                                else:
-                                    raise(Exception("unknown stroke type in replaneCluster!"))
-                                # if so, connect em
-
-                            newlyConnectedStrokes.append(potentialNewConnection)    # add them to the list
+                                if successfullyReplaned:
+                                    newlyConnectedStrokes.append(potentialNewConnection)    # add them to the list
+                        else:
+                            # this one's already been done, don't bother
+                            continue # not break! we still wanna check the other potential connections                        
                 pass
             
             if len(newlyConnectedStrokes)>0:
@@ -221,10 +188,6 @@ class PlanarStrokeCluster():
                 break # nothing to see here, think we got em all!
         
         return currentlyConnectedStrokes
-
-
-
-
 
 
 # -------------------------------------------------------------------------------------------------------
@@ -455,108 +418,138 @@ class PlanarStroke(Stroke):
         else:
             return len(self.intersections)<len(other.intersections)
     
-    def hasBeenDefined(self):
-        """ are we ready to replace, ie has the next thing up been placed?"""
-        if self.strokeType == StrokeType.planar_arbitrary:
-            pass # TODO check for at least 3 defined parents
-            return False
-        else:
-            return (self.normal != None) and (self.origin != None)
 
-    # oof this is wrong!
-    def strokeType(self):
-        """what kinda stroke are we?"""
-        if self.normal==None:
-            return StrokeType.planar_arbitrary
-        else:
-            return StrokeType.planar_axial
+    # TODO: this is duplicate functionality maybe? should just roll it into replane?
+    #def hasBeenDefined(self):
+    #    """ are we ready to replace, ie has the next thing up been placed?"""
+    #    if self.strokeType == StrokeType.planar_arbitrary:
+    #        pass # TODO check for at least 3 defined parents
+    #        return False
+    #    else:
+    #        return (self.normal != None) and (self.origin != None)
 
-    def rePlane(self):
-        """Recalculates all the point coordinates based on the polar coordinates, cameraOrigin, normal and origin
-        If it's an arbitrary plane, no normal has been specified, searches all intersecting planes to try to find 3 that have been placed!
+    def getScreenSpaceIntersections(self, other):
+        """return list of screenspace coordinate of intersections if they intersect, otherwise []
+        Needs to handle multiple intersections if they exist! """
+        screenSpaceIntersections = []
         
+        # TODO: check if multiple marker intersections even work!
+        if len(self.intersections)==None:  return screenSpaceIntersections
+        if len(other.intersections)==None: return screenSpaceIntersections
+        
+        for marker in self.intersections.keys():
+            for intersectingStroke in marker.intersections.keys():
+                if intersectingStroke == other:
+                    # ok, so the two strokes intersect at this marker, let's add the screenspace coordinate to the list
+                    ssi = self.intersections[marker] # this should get the intersection position from the dict
+                    screenSpaceIntersections.append(ssi)    
+        return screenSpaceIntersections
+        
+    def rePlane(self, connectedStrokes = [], testOnly = False):
+        """Recalculates all the point coordinates. Uses the strokes in clusterConnections to get the values we need: polar coordinates, cameraOrigin, normal and origin
+        If it's an arbitrary plane, no normal has been specified, searches all intersecting planes to try to find 3 that have been placed!
+        returns true if it worked, false if it didn't
         """
 
-        # TODO: there's a ton of duplication here, maybe leave everything that happens BETWEEN strokes in Cluster.replane? that would imply setting the normal there, maybe make a helper function
+        # do all the replaning (setting origins, etc) here instead of scattering around
         
         # sanity checks
         if self.hasBeenPlaced:
-            raise(Exception("Stroke has already been placed!"))
-        if self.strokeType == StrokeType.planar_axial:
-            if self.origin == None:
-                raise(Exception("Can't define axial planar stroke - we don't know its origin!"))
-        if self.normal == None:
-            raise(Exception("Can't define planar stroke, we don't know its normal"))
-
-        if self.strokeType==StrokeType.planar_arbitrary:
-            print ('replaning arbitrary stroke')
-            # ok, so we don't know where this should go!!!! It's an ARBITRARY PLANE
-            
-            # find how many of the connection makers have a definied cartesian coordinate (we need 3)
-            definedIntersectionMarkers = {}
-            for item in self.intersections.items():
-                print (item)
-                if item[0].hasDefinedIntersectingStrokes():
-                    definedIntersectionMarkers[item[0]] = item[1] # *think* that's right
-                    #print ('yes')
-                else:
-                    #print('no')
-                    pass
-
-            nDefinedIntersections = len(definedIntersectionMarkers)
-            print ('arbitrary plane found with ' + str(nDefinedIntersections) + '/' + str(len(self.intersections)) + ' intersections defined')
-            
-            # ok, so how about this. We're gonna prioritize connections from axial planar strokes, if we have 3 of those then we good.
-            # TODO: add axial strokes to the priority list thing
-            # if not, and we have any connection to a planar stroke that has already been defined, use the first one
-            # if we have many connections to 
-            
-            if nDefinedIntersections==0:
-                # no idea what to do with this....let's just say...Z?
-                print ('no defined intersections found on arbitrary stroke, skipping')
-                return # we haven't set it to be 'defined' so this will not recurse
-            elif nDefinedIntersections<3:
-                print ('<3 defined intersections found on arbitrary stroke, guessing')
-                # ok, just gonna go thru all of them until we find something that has been defined, that's gonna be the parent!
-                foundParent = False
-                for intersection in self.intersections:
-                    for intersectingPlanarStroke in intersection.intersections:
-                        if intersectingPlanarStroke.hasBeenPlaced:
-                            self.normal = intersectingPlanarStroke.normal
-                            foundParent = True
-                            break
-                    if foundParent:
-                        break
-                if foundParent==False:
-                    return
-            else:
-                # ok, so we have at least 3 intersections
-                pass
-                # TODO actually figure it out!
-                # self.hasBeenDefined = True # remember to mark it as defined
-
-        elif self.strokeType==StrokeType.planar_axial:   
-            print ('replaning axial stroke')
-            # so, once we know the normal, for every point:
-            for point in self.gpStroke.points.values():
-                # we know the line it's on (from the camera origin, through the world point (assuming it's different)
-                # we know the plane it's on (from the plane origin and normal
-                # so we gotta find the intersection
-                p0 = self.cameraOrigin # p0, p1: define the line
-                p1 = point.co 
-                p_co = self.origin # p_co is a point on the plane (plane coordinate).
-                p_no = self.normal #p_no is a normal vector defining the plane direction (does not need to be normalized).
-                #intersectionPoint = isect_line_plane_v3(p0, p1, p_co, p_no) # should not be none!
-                intersectionPoint = geometry.intersect_line_plane(p0, p1, p_co, p_no)
-                if intersectionPoint==None:
-                    raise(Exception("A bad thing happened that shouldn't have happened...."))
-
-                # then move it to the new location
-                point.co = intersectionPoint
-            self.hasBeenPlaced = True #whoop
-        else:
-            # oops wtf
+            return False # it's already been done, let's not do it again!
+        if self.strokeType not in [StrokeType.planar_arbitrary, StrokeType.planar_axial]:
             raise(Exception("Stroke has unexpected stroke type: " + str(self.strokeType)))
+
+
+        # special case if this is the first stroke
+        if connectedStrokes==[]:
+            if self.strokeType==StrokeType.planar_axial:
+                self.origin = Vector() # if it's the first stroke, and it's axial, 
+            else:
+                raise(Exception("initial stroke in rePlane must be of type planar_axial!"))
+        else:
+            # for all strokes except the first one:
+
+            # figure out how many anchors we're gonna need
+            # an anchor is just a *point in cartesian space that we know is on the new plane*
+            if self.strokeType==StrokeType.planar_arbitrary:
+                minimumRequiredAnchorPoints = 3
+            else:
+                minimumRequiredAnchorPoints = 1
+            # todo - if we just get *all* connections we could average it out, might be more tolerant to errors?
+
+            # try to find the correct number of anchor points
+            anchorPoints = []
+            for intersectingStroke in connectedStrokes:
+                # we can safely (?) assume that the plane of this one has been defined, otherwise it shouldn't be connected
+                intersectionsWithThisStroke = self.getScreenSpaceIntersections(intersectingStroke)
+                for intersectionWithThisStroke in intersectionsWithThisStroke:
+                    # TODO: we don't actually need to do this during testing, we just wanna know how many there are gonna be
+
+                    # ok, this is the screenspace coordinate, we can get where it is reasonably easily
+                    # where the angular line intersects with the replaneStroke's plane                
+                    p0 = self.cameraOrigin # p0, p1: define the line
+                    p1 = Vector(polarToCartesian(1, intersectionWithThisStroke[0], intersectionWithThisStroke[1])) + self.cameraOrigin  # eh gotta get the xyz from the polar, dang. MAYBE CHECK - need to compensate for cam origin not being at zero so added it...?
+                    p_co = intersectingStroke.origin # p_co is a point on the plane (plane coordinate).
+                    p_no = intersectingStroke.normal #p_no is a normal vector defining the plane direction (does not need to be normalized).
+                    cartesianCoordinate = geometry.intersect_line_plane(p0, p1, p_co, p_no)
+                    if cartesianCoordinate==None:
+                        raise(Exception("Intersection point = None on stroke: ", self))
+                    anchorPoints.append(cartesianCoordinate)
+                    # might as well keep going, rather than stopping, and get all the markers we can?
+            
+            # ok, let's see if we have enough!
+            if len(anchorPoints) < minimumRequiredAnchorPoints:
+                # we don't have enough information to make this work
+                return False
+            else:
+                if testOnly:
+                    return True # if we're just testing, that's all the info we needed!
+        
+            # ok, now we know the worldspace position of the intersections
+
+        
+            # calculate the normal (can skip this for axial strokes)
+            if self.strokeType==StrokeType.planar_arbitrary:
+                
+                print ('replaning arbitrary stroke')
+                # ok, so we don't know where this should go!!!! It's an ARBITRARY PLANE
+
+                print ('arbitrary plane found with ' + str(anchorPoints) + ' anchor points defined')
+
+                # right, we have at least 3 anchor points, we gotta put a plane through them.
+                # we already calculated the origin
+                # then for *every possible group of 3* we're gonna calculate the normal
+                # then we're gonna flip the normals that are inverted
+                # then we're gonna take the average normal
+
+                #placeholder simple mode, just from the first three:
+                testPoints = anchorPoints[:3] # should work, right!
+                v1 = testPoints[1] - testPoints[0]
+                v2 = testPoints[2] - testPoints[0]
+                self.normal = v1.cross(v2)
+
+            # set the origin (this is the same for both arbitrary and axial planar strokes)
+            self.origin = averageVectors(anchorPoints) # I thiiink that's right?
+        
+        # so, once we know the normal and origin, for every point:
+        for point in self.gpStroke.points.values():
+            # we know the line it's on (from the camera origin, through the world point (assuming it's different)
+            # we know the plane it's on (from the plane origin and normal
+            # so we gotta find the intersection
+            p0 = self.cameraOrigin # p0, p1: define the line
+            p1 = point.co 
+            p_co = self.origin # p_co is a point on the plane (plane coordinate).
+            p_no = self.normal #p_no is a normal vector defining the plane direction (does not need to be normalized).
+            #intersectionPoint = isect_line_plane_v3(p0, p1, p_co, p_no) # should not be none!
+            intersectionPoint = geometry.intersect_line_plane(p0, p1, p_co, p_no)
+            if intersectionPoint==None:
+                raise(Exception("A bad thing that shouldn't have happened happened...."))
+            # then move it to the new location
+            point.co = intersectionPoint
+
+        self.hasBeenPlaced = True #whoop
+        return True # done!
+
     
     def adjacentPlanarStrokes(self):
         """return the planar strokes intersecting with markers intersecting with this that aren't this"""
