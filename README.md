@@ -1,7 +1,6 @@
 # Pipecleaner for Blender
+
 Experimental addon for Blender, allowing the construction of 3D "pipecleaner" models from 2D grease pencil strokes
-
-
 
 ## Todo
 
@@ -32,8 +31,7 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 1. from the camera view, roughly draw your object or scene, making sure it's aligned with the perspective grid (you can also put some rough 3D objects if you need a guide, accuracy is important with this)
 1. add the required materials
 1. draw a series of strokes aligned to either the x, y or z plane using the respective materials
-1. connect the strokes into long chains of strokes with the intersection marker material (like making a model out of pipecleaners...). You can also just make tiny strokes using whatever brush you're currently using, then use a function to convert everything 
-1.
+1. connect the strokes into long chains of strokes with the intersection marker material (like making a model out of pipecleaners...). You can also just make tiny strokes using whatever brush you're currently using, then use a function to convert everything
 
 ## Limitations
 
