@@ -72,12 +72,13 @@ class Camera():
         print('setting up camera')
         self.camera = cam
         self.origin = cam.location
+        # TODO: we're not actually using rotation now we have direction vector, right?
         rotation_euler = cam.rotation_euler
         if rotation_euler.order != 'XYZ':
             raise(Exception('This has only been tested with the default XYZ rotation order on cameras, you probably wanna change that back'))
         self.heading = math.degrees(rotation_euler[0])  # in radians, we actually might not even need this?!
         self.elevation = math.degrees(rotation_euler[2])
-
+        self.direction = cam.matrix_world.to_quaternion() @ Vector((0.0, 0.0, -1.0))  # it's a vector now, what else do ya want https://blender.stackexchange.com/questions/13738/how-to-calculate-the-direction-and-up-vector-of-a-camera
         print('got camera, position', self.origin, ', heading', self.heading, ', elevation', self.elevation)
 
 
@@ -175,6 +176,7 @@ class Stroke():
         self.bBox_thetaMax = None
         self.cameraOrigin = camera.origin
         self.origin = None  # where it is in 3d space (point for a marker, origin for a planar stroke)
+        self.normal = None
         self.hasBeenPlaced = False
         self.strokeType = StrokeType.undefined  # override this!
 
@@ -332,7 +334,26 @@ class Stroke():
                             ip = self.get_lineIntersectionPoint([lineA_x1, lineA_y1], [lineA_x2, lineA_y2], [lineB_x1, lineB_y1], [lineB_x2, lineB_y2])
                             return ip  # just the [phi, theta]
         return None
-    pass
+
+    def rePlane(self):
+        """separated this out, it now assumes you've already specified the ORIGIN and the NORMAL"""
+        # TODO: initialise the marker strokes to just point along the camera vector
+        # so, once we know the normal and origin, for every point:
+        for point in self.gpStroke.points.values():
+            # we know the line it's on (from the camera origin, through the world point (assuming it's different)
+            # we know the plane it's on (from the plane origin and normal
+            # so we gotta find the intersection
+            p0 = self.cameraOrigin  # p0, p1: define the line
+            p1 = point.co
+            p_co = self.origin  # p_co is a point on the plane (plane coordinate).
+            p_no = self.normal  # p_no is a normal vector defining the plane direction (does not need to be normalized).
+            # intersectionPoint = isect_line_plane_v3(p0, p1, p_co, p_no) # should not be none!
+            intersectionPoint = geometry.intersect_line_plane(p0, p1, p_co, p_no)
+            if intersectionPoint is None:
+                raise(Exception("A bad thing that shouldn't have happened happened...."))
+            # then move it to the new location
+            point.co = intersectionPoint
+
 
 
 # -------------------------------------------------------------------------------------------------------
@@ -341,7 +362,18 @@ class IntersectionMarker(Stroke):
     def __init__(self, gpStroke, camera):
         super().__init__(gpStroke, camera)
         self.strokeType = StrokeType.marker
-        # self.intersectingStrokes = [] # store a list of references to all intersecting strokes
+        self.normal = camera.direction # simple enough huh
+
+
+    def calculateOriginAndRePlane(self):
+        """ok we just look at the first placed connected stroke and intersect with that"""
+        for intersection in self.intersections.keys():
+            if intersection.hasBeenDefined:
+                # get where we intersect
+                polarCoordinate = self.intersections[intersection][0]
+
+                self.rePlane()
+                return
 
 
 # -------------------------------------------------------------------------------------------------------
@@ -351,7 +383,6 @@ class PlanarStroke(Stroke):
         super().__init__(gpStroke, camera)
 
         # planar stroke attributes
-        self.normal = None
         # self.planeOrigin = None
         # self.hasBeenDefined = False # has it been defined in xyz space or just polar
         # self.cluster = None # used when building clusters I guess?
@@ -395,24 +426,15 @@ class PlanarStroke(Stroke):
                     screenSpaceIntersections.append(ssi)
         return screenSpaceIntersections
 
-    def rePlane(self):
-        """separated this out, it now assumes you've already specified the ORIGIN and the NORMAL"""
-        # TODO: initialise the marker strokes to just point along the camera vector
-        # so, once we know the normal and origin, for every point:
-        for point in self.gpStroke.points.values():
-            # we know the line it's on (from the camera origin, through the world point (assuming it's different)
-            # we know the plane it's on (from the plane origin and normal
-            # so we gotta find the intersection
-            p0 = self.cameraOrigin  # p0, p1: define the line
-            p1 = point.co
-            p_co = self.origin  # p_co is a point on the plane (plane coordinate).
-            p_no = self.normal  # p_no is a normal vector defining the plane direction (does not need to be normalized).
-            # intersectionPoint = isect_line_plane_v3(p0, p1, p_co, p_no) # should not be none!
-            intersectionPoint = geometry.intersect_line_plane(p0, p1, p_co, p_no)
-            if intersectionPoint is None:
-                raise(Exception("A bad thing that shouldn't have happened happened...."))
-            # then move it to the new location
-            point.co = intersectionPoint
+    def polarToCartesianPositionOfIntesection(self, polarCoordinate):
+        """assuming the plane has been defined (we know its origin and normal), this calculates the cartesian 
+        position of the polar coordinate (from the camera)"""
+        p0 = self.cameraOrigin  # p0, p1: define the line
+        p1 = Vector(polarToCartesian(1, polarCoordinate[0], polarCoordinate[1])) + self.cameraOrigin  # eh gotta get the xyz from the polar, dang. MAYBE CHECK - need to compensate for cam origin not being at zero so added it...?
+        p_co = self.origin  # p_co is a point on the plane (plane coordinate).
+        p_no = self.normal  # p_no is a normal vector defining the plane direction (does not need to be normalized).
+        cartesianCoordinate = geometry.intersect_line_plane(p0, p1, p_co, p_no)
+        return cartesianCoordinate
 
     def calculateNormalAndOrigin(self, connectedStrokes=[], testOnly=False):
         """Recalculates all the point coordinates. Uses the strokes in clusterConnections to get the values we need: polar coordinates, cameraOrigin, normal and origin
@@ -457,12 +479,8 @@ class PlanarStroke(Stroke):
                             break  # should really break twice, but hey
                     else:
                         # ok, this is the screenspace coordinate, we can get where it is reasonably easily
-                        # where the angular line intersects with the replaneStroke's plane
-                        p0 = self.cameraOrigin  # p0, p1: define the line
-                        p1 = Vector(polarToCartesian(1, intersectionWithThisStroke[0], intersectionWithThisStroke[1])) + self.cameraOrigin  # eh gotta get the xyz from the polar, dang. MAYBE CHECK - need to compensate for cam origin not being at zero so added it...?
-                        p_co = intersectingStroke.origin  # p_co is a point on the plane (plane coordinate).
-                        p_no = intersectingStroke.normal  # p_no is a normal vector defining the plane direction (does not need to be normalized).
-                        cartesianCoordinate = geometry.intersect_line_plane(p0, p1, p_co, p_no)
+                        # where the angular line intersects with the replaneStroke's plane                       
+                        cartesianCoordinate = intersectingStroke.polarToCartesianPositionOfIntesection([intersectionWithThisStroke[0], intersectionWithThisStroke[1]])
                         if cartesianCoordinate is None:
                             raise(Exception("Intersection point = None on stroke: ", self))
                         anchorPoints.append(cartesianCoordinate)

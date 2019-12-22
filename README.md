@@ -21,7 +21,8 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 - [ ] add addon stuff
 - [ ] position intersection markers in 3D space?
 - [ ] finish readme.md!
-
+- [ ] clarify hasBeenPlaced (no longer required?) vs hasBeenDefined
+ 
 ## Usage
 
 1. learn to draw
