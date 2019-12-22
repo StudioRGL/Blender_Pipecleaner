@@ -94,7 +94,7 @@ class PlanarStrokeCluster():
         # we DON'T need to give it existing clusters because all strokes in
         # that cluster would already be in a cluster and by definition can't
         # be connected to this one
-        self.potentialConnections = self.replaneCluster(testOnly=True)  # self.indirectlyConnectedStrokes() # TODO: is this still required really?
+        self.potentialConnections = self.replaneCluster(testOnly=True)  # find all the potential connections
 
     def __repr__(self):
         """The print statement"""
@@ -113,54 +113,16 @@ class PlanarStrokeCluster():
         else:
             raise(Exception("could not get 'most connected stroke' from empty stroke cluster"))
 
-    def indirectlyConnectedStrokes(self):
-        """ alternately expands by ARBITRARY strokes (need 3 connections) and AXIAL strokes (need 1 connection) until we don't get any more"""  # TODO: remove this, it's replaced by replaneCluster
-        answer = self.strokes[:]  # initialize it
-
-        MAX_ITERATIONS = 9999  # hmmmm not sure this is good coding practise?
-        i = 0
-        while i < MAX_ITERATIONS:
-            i += 1
-            newConnections = []
-
-            for strokeType in [StrokeType.planar_arbitrary, StrokeType.planar_axial]:
-                for stroke in answer:
-                    # ok, check all the connected strokes of our new type
-                    for iStroke in stroke.allConnectedPlanarStrokes(strokeTypes=[strokeType], connectionList=answer + newConnections):
-                        if iStroke in answer or iStroke in newConnections:
-                            continue  # we got it, we got it
-                        # the number of required connections depends on the type of stroke
-                        if strokeType == StrokeType.planar_axial:  # just needs one connection
-                            # well, just add it on
-                            newConnections.append(iStroke)
-                        elif strokeType == StrokeType.planar_arbitrary:  # needs 3 connections
-                            # check how many connections it has in the current group
-                            connectionCount = 0
-                            for connector in iStroke.adjacentPlanarStrokes():
-                                if connector in answer:
-                                    connectionCount += 1
-                                if connectionCount >= 3:
-                                    # we got it! whoo!
-                                    newConnections.append(iStroke)
-                                    break
-                        else:
-                            raise(Exception("Unexpected stroke type!"))
-            if len(newConnections) > 0:
-                # if we got any new ones
-                answer += newConnections
-            else:
-                break  # nothing to see here, think we got em all!
-        return answer
-
     def replaneCluster(self, testOnly=False):
         """ ok so this either tries to, or does, propogate from the mostConnectedStroke through the whole network, alternately doing rounds of axial and arbitrary strokes"""
         # set up the first stroke or it ain't gonna work!
         firstStroke = self.mostConnectedStroke()
 
         if testOnly is False:
-            successfullyReplaned = firstStroke.rePlane()
-            if not successfullyReplaned:
-                raise(Exception("Could not replane first stroke "))
+            successfullyCalculatedNormalsAndOrigin = firstStroke.calculateNormalAndOrigin()
+            firstStroke.rePlane()
+            if not successfullyCalculatedNormalsAndOrigin:
+                raise(Exception("Could not calculate origin and normals of first stroke "))
         currentlyConnectedStrokes = [firstStroke]
 
         i = 0
@@ -180,9 +142,11 @@ class PlanarStrokeCluster():
                                 # seems to be a new one!
 
                                 # ok, so the simpler version is to just 'try to replane' here, if it works it works
-                                successfullyReplaned = potentialNewConnection.rePlane(connectedStrokes=(currentlyConnectedStrokes + newlyConnectedStrokes), testOnly=testOnly)
+                                successfullyCalculatedNormalsAndOrigin = potentialNewConnection.calculateNormalAndOrigin(connectedStrokes=(currentlyConnectedStrokes + newlyConnectedStrokes), testOnly=testOnly)
 
-                                if successfullyReplaned:
+                                if successfullyCalculatedNormalsAndOrigin:
+                                    if testOnly is False:
+                                        potentialNewConnection.rePlane()
                                     newlyConnectedStrokes.append(potentialNewConnection)    # add them to the list
 
             if len(newlyConnectedStrokes) > 0:
@@ -379,21 +343,6 @@ class IntersectionMarker(Stroke):
         self.strokeType = StrokeType.marker
         # self.intersectingStrokes = [] # store a list of references to all intersecting strokes
 
-    def definedIntersectingStrokes(self):
-        """returns a list of all PLACED strokes that intersect this one"""
-        answer = []
-        for i in self.intersections.keys():
-            if i.hasBeenPlaced:
-                answer.append(i)
-        return answer
-
-    def hasDefinedIntersectingStrokes(self):
-        """returns a bool if any of the intersecting strokes has been placed"""
-        for i in self.intersections.keys():
-            if i.hasBeenPlaced:
-                return True
-        return False
-
 
 # -------------------------------------------------------------------------------------------------------
 class PlanarStroke(Stroke):
@@ -446,7 +395,26 @@ class PlanarStroke(Stroke):
                     screenSpaceIntersections.append(ssi)
         return screenSpaceIntersections
 
-    def rePlane(self, connectedStrokes=[], testOnly=False):
+    def rePlane(self):
+        """separated this out, it now assumes you've already specified the ORIGIN and the NORMAL"""
+        # TODO: initialise the marker strokes to just point along the camera vector
+        # so, once we know the normal and origin, for every point:
+        for point in self.gpStroke.points.values():
+            # we know the line it's on (from the camera origin, through the world point (assuming it's different)
+            # we know the plane it's on (from the plane origin and normal
+            # so we gotta find the intersection
+            p0 = self.cameraOrigin  # p0, p1: define the line
+            p1 = point.co
+            p_co = self.origin  # p_co is a point on the plane (plane coordinate).
+            p_no = self.normal  # p_no is a normal vector defining the plane direction (does not need to be normalized).
+            # intersectionPoint = isect_line_plane_v3(p0, p1, p_co, p_no) # should not be none!
+            intersectionPoint = geometry.intersect_line_plane(p0, p1, p_co, p_no)
+            if intersectionPoint is None:
+                raise(Exception("A bad thing that shouldn't have happened happened...."))
+            # then move it to the new location
+            point.co = intersectionPoint
+
+    def calculateNormalAndOrigin(self, connectedStrokes=[], testOnly=False):
         """Recalculates all the point coordinates. Uses the strokes in clusterConnections to get the values we need: polar coordinates, cameraOrigin, normal and origin
         If it's an arbitrary plane, no normal has been specified, searches all intersecting planes to try to find 3 that have been placed!
         returns true if it worked, false if it didn't
@@ -540,21 +508,7 @@ class PlanarStroke(Stroke):
             # set the origin (this is the same for both arbitrary and axial planar strokes)
             self.origin = averageVectors(anchorPoints)  # I thiiink that's right?
 
-        # so, once we know the normal and origin, for every point:
-        for point in self.gpStroke.points.values():
-            # we know the line it's on (from the camera origin, through the world point (assuming it's different)
-            # we know the plane it's on (from the plane origin and normal
-            # so we gotta find the intersection
-            p0 = self.cameraOrigin  # p0, p1: define the line
-            p1 = point.co
-            p_co = self.origin  # p_co is a point on the plane (plane coordinate).
-            p_no = self.normal  # p_no is a normal vector defining the plane direction (does not need to be normalized).
-            # intersectionPoint = isect_line_plane_v3(p0, p1, p_co, p_no) # should not be none!
-            intersectionPoint = geometry.intersect_line_plane(p0, p1, p_co, p_no)
-            if intersectionPoint is None:
-                raise(Exception("A bad thing that shouldn't have happened happened...."))
-            # then move it to the new location
-            point.co = intersectionPoint
+        # self.rePlane()
 
         # we can also place all the markers now (not necessary but makes things a bit more legible!)
 
@@ -706,8 +660,6 @@ def flattenAll():
             p = PlanarStroke(stroke, camera)
             p.origin = Vector((0, 2, 0))
             p.normal = (Vector((-1, 1, 0)))
-            print(p.cameraOrigin)
-            print(p)
             p.rePlane()
     pass
 
@@ -741,9 +693,6 @@ def solveContours():
     # ok, so, refactored version would be:
     clusters = getClusters(planarStrokes)  # create clusters of all directly-connected axial strokes
     print('calculated clusters')
-
-    # for stroke in planarStrokes:
-    #    stroke.highlightIfDisconnected()
 
     # then for each cluster:
     #   measure how many nodes we can define if we propogate outwards, for each cluster (I guess a recursive 'potential connections' checker that can be reused?) this alternates between axial and arbitrary?

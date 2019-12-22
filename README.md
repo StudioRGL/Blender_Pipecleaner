@@ -8,6 +8,7 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 - [x] implement cluster-based population
 - [x] add arbitrary planes support
 - [ ] make sure it works with colinear points (or rather, fails gracefully)
+- [ ] rename functions for consistency
 - [ ] make proper averaging for arbitrary planes?
 - [ ] deal with locked/hidden layers? what should it do? maybe ignore locked layers, but not hidden layers?
 - [ ] doesn't always seem to reliably deal with intersections?
@@ -35,4 +36,4 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 
 ## Limitations
 
-- only works when drawing from a perspective camera
+- Only works when drawing from a perspective camera. Workaround: use a perspective camera far away to approximate orthographic behaviour if you need it
