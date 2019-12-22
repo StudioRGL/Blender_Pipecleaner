@@ -355,24 +355,23 @@ class Stroke():
             point.co = intersectionPoint
 
 
-
 # -------------------------------------------------------------------------------------------------------
 class IntersectionMarker(Stroke):
     """subclass of stroke used for intersection markers"""
     def __init__(self, gpStroke, camera):
         super().__init__(gpStroke, camera)
         self.strokeType = StrokeType.marker
-        self.normal = camera.direction # simple enough huh
-
+        self.normal = camera.direction  # simple enough huh
 
     def calculateOriginAndRePlane(self):
         """ok we just look at the first placed connected stroke and intersect with that"""
         for intersection in self.intersections.keys():
-            if intersection.hasBeenDefined:
+            if intersection.hasBeenPlaced:
                 # get where we intersect
-                polarCoordinate = self.intersections[intersection][0]
-
-                self.rePlane()
+                polarCoordinate = self.intersections[intersection]
+                self.origin = intersection.polarToCartesianPositionOfIntesection(polarCoordinate)
+                if self.origin:
+                    self.rePlane()
                 return
 
 
@@ -427,7 +426,7 @@ class PlanarStroke(Stroke):
         return screenSpaceIntersections
 
     def polarToCartesianPositionOfIntesection(self, polarCoordinate):
-        """assuming the plane has been defined (we know its origin and normal), this calculates the cartesian 
+        """assuming the plane has been defined (we know its origin and normal), this calculates the cartesian
         position of the polar coordinate (from the camera)"""
         p0 = self.cameraOrigin  # p0, p1: define the line
         p1 = Vector(polarToCartesian(1, polarCoordinate[0], polarCoordinate[1])) + self.cameraOrigin  # eh gotta get the xyz from the polar, dang. MAYBE CHECK - need to compensate for cam origin not being at zero so added it...?
@@ -479,7 +478,7 @@ class PlanarStroke(Stroke):
                             break  # should really break twice, but hey
                     else:
                         # ok, this is the screenspace coordinate, we can get where it is reasonably easily
-                        # where the angular line intersects with the replaneStroke's plane                       
+                        # where the angular line intersects with the replaneStroke's plane
                         cartesianCoordinate = intersectingStroke.polarToCartesianPositionOfIntesection([intersectionWithThisStroke[0], intersectionWithThisStroke[1]])
                         if cartesianCoordinate is None:
                             raise(Exception("Intersection point = None on stroke: ", self))
@@ -735,6 +734,10 @@ def solveContours():
             print('already replaned, skipping')
 
         # note: for arbitrary planar strokes, all parents must be from one cluster
+
+    # not required for the maths, but just to tie things together visually lets position the markers
+    for marker in intersectionMarkers:
+        marker.calculateOriginAndRePlane()
 
     # select all strokes not joined to the first cluster
     for i in range(len(clusters)):
