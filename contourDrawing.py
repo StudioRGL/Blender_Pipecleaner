@@ -59,13 +59,15 @@ def colinear(p0, p1, p2):
     return abs(x1 * y2 - x2 * y1) < 1e-12
 
 
-class materialNames(Enum):
+class materialNames():
     """Get a dict of the required materials"""
-    x = 'contour_X',
-    y = 'contour_Y',
-    z = 'contour_Z',
-    arbitrary = 'contour_W',
-    intersection = 'contour_intersection'
+    def __init__(self):
+        self.x = 'contour_X',
+        self.y = 'contour_Y',
+        self.z = 'contour_Z',
+        self.arbitrary = 'contour_W',
+        self.intersection = 'contour_intersection'
+        self.allMaterialNames = [self.x, self.y, self.z, self.arbitrary, self.intersection]
 
 
 class StrokeType(Enum):
@@ -599,7 +601,7 @@ def getStrokeData(camera):
                     itsAMarker = False
                     # check material
                     materialIndex = stroke.material_index
-                    if materialIndex == gp.data.materials.keys().index(materialNames.intersection):  # or nPoints < INTERSECTION_MARKER_THRESHOLD: # TODO: set up separate marker detection based on bbox
+                    if materialIndex == gp.data.materials.keys().index(materialNames().intersection):  # or nPoints < INTERSECTION_MARKER_THRESHOLD: # TODO: set up separate marker detection based on bbox
                         # it's an intersection marker
                         # set the material (maybe redundant)
                         itsAMarker = True
@@ -610,7 +612,7 @@ def getStrokeData(camera):
                         if bBoxArea < INTERSECTION_MARKER_THRESHOLD:
                             itsAMarker = True
                             # set the mat, cos it wasn't set
-                            stroke.material_index = gp.data.materials.keys().index(materialNames.intersection)  # by material name
+                            stroke.material_index = gp.data.materials.keys().index(materialNames().intersection)  # by material name
 
                     if itsAMarker:
                         # create an intersectionLine from it
@@ -622,13 +624,13 @@ def getStrokeData(camera):
 
                         normal = None
                         strokeType = StrokeType.planar_axial
-                        if materialIndex == gp.data.materials.keys().index(materialNames.x):
+                        if materialIndex == gp.data.materials.keys().index(materialNames().x):
                             normal = Vector((1, 0, 0))
-                        elif materialIndex == gp.data.materials.keys().index(materialNames.y):
+                        elif materialIndex == gp.data.materials.keys().index(materialNames().y):
                             normal = Vector((0, 1, 0))
-                        elif materialIndex == gp.data.materials.keys().index(materialNames.z):
+                        elif materialIndex == gp.data.materials.keys().index(materialNames().z):
                             normal = Vector((0, 0, 1))
-                        elif materialIndex == gp.data.materials.keys().index(materialNames.arbitrary):  # arbitrary plane!
+                        elif materialIndex == gp.data.materials.keys().index(materialNames().arbitrary):  # arbitrary plane!
                             normal = None
                             strokeType = StrokeType.planar_arbitrary
                         else:
@@ -687,7 +689,11 @@ def flattenAll():
 
 def materialsExist():
     """check if the materials exist in the scene"""
-    # TODO: write, connect
+    materialsInScene = bpy.data.materials.keys()
+    for materialName in materialNames().allMaterialNames:
+        if materialName not in materialsInScene:
+            return False
+    return True
 
 
 def createMaterials():
@@ -822,6 +828,12 @@ class PipeCleanerPanel(bpy.types.Panel):
 
         # From here on out we can assume we got a gp object that's a grease pencil
         # See if the material exist in the scene
+        if materialsExist() is False:
+            row = layout.row()
+            row.label(text="Materials not found! Create correctly-named materials to continue")
+        else:
+            row = layout.row()
+            row.label(text="Materials found")
 
         # row = layout.row()
         # row.label(text="PipeCleaner Tools", icon='WORLD_DATA')
