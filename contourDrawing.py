@@ -64,12 +64,13 @@ class materialNames():
     """Get a dict of the required materials"""
     # TODO: this seems like a sloppy way of doing this, what's the proper way of doing this?
     def __init__(self):
-        self.x = 'contour_X'
-        self.y = 'contour_Y'
-        self.z = 'contour_Z'
-        self.arbitrary = 'contour_W'
-        self.intersection = 'contour_intersection'
-        self.rough = 'contour_rough'
+        prefix = 'Pipecleaner_'
+        self.x = prefix + 'X'
+        self.y = prefix + 'Y'
+        self.z = prefix + 'Z'
+        self.arbitrary = prefix + 'W'
+        self.intersection = prefix + 'intersection'
+        self.rough = prefix + 'rough'
         self.allMaterialNames = [self.x, self.y, self.z, self.arbitrary, self.intersection, self.rough]
 
 
@@ -572,6 +573,10 @@ class PlanarStroke(Stroke):
 
 # USER INTERFACE FUNCTIONS
 
+def convertSmallStrokesToMarkers():
+    """takes any stroke below a certain polar bounding box size and sets its material to be the intersection material"""
+    return
+
 def getActiveGreasePencilObject():
     gp = bpy.context.active_object
     if gp.type != 'GPENCIL':
@@ -704,11 +709,11 @@ def createMaterial(materialName, color):
         return  # if we already got this one, don't bother
     mat = bpy.data.materials.new(name=materialName)
     mat.use_fake_user = True
-    # mat.is_grease_pencil = True
-    # mat.grease_pencil.show_stroke = True
-    # mat.grease_pencil.stroke_style = 'SOLID'
-    # mat.grease_pencil.color = [0,1,0,1] # RGBA
-    # mat.grease_pencil.show_fill   = False
+    bpy.data.materials.create_gpencil_data(mat)
+    mat.grease_pencil.show_stroke = True
+    mat.grease_pencil.stroke_style = 'SOLID'
+    mat.grease_pencil.color = color # RGBA
+    mat.grease_pencil.show_fill   = False
 
 
 def createMaterials():
@@ -800,7 +805,7 @@ def solveContours():
 
 
 class Pipecleaner_CreateMaterialsOperator(bpy.types.Operator):
-    """This adds the required special materials to the selected Grease Pencil Stroke"""
+    """This adds the required special materials to the scene"""
     # TODO: write this!
     bl_idname = "pipecleaner.creatematerials"
     bl_label = "Create Materials"
@@ -810,12 +815,24 @@ class Pipecleaner_CreateMaterialsOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class Pipecleaner_AssignMaterialsOperator(bpy.types.Operator):
+    """This assigns the required special materials to the selected Grease Pencil Stroke"""
+    # TODO: write this!
+    bl_idname = "pipecleaner.creatematerials"
+    bl_label = "Assign Materials to Stroke"
+
+    def execute(self, context):
+        #createMaterials()
+        return {'FINISHED'}
+
+
 class Pipecleaner_DetectIntersectionMarkersOperator(bpy.types.Operator):
     """Labels all small (in bounding box area) strokes as Intersection Markers"""
     bl_idname = "pipecleaner.detectintersectionmarkers"
-    bl_label = "Pipecleaner_DetectIntersectionMarkers"
+    bl_label = "Detect Intersection Markers"
 
     def execute(self, context):
+        convertSmallStrokesToMarkers()
         return {'FINISHED'}
 
 
@@ -823,7 +840,7 @@ class Pipecleaner_SolveContoursOperator(bpy.types.Operator):
     """This solves the contours for the selected greasepencil object"""
     # TODO: add options (like which camera to use, for example)
     bl_idname = "pipecleaner.solvecontours"
-    bl_label = "Pipecleaner_SolveContours"
+    bl_label = "Solve Contours"
 
     def execute(self, context):
         return {'FINISHED'}
@@ -842,29 +859,45 @@ class PipecleanerPanel(bpy.types.Panel):
         # draw stuff
 
         layout = self.layout
-        gp = bpy.context.active_object
-        if gp.type != 'GPENCIL':
+        gpFound = (bpy.context.active_object!=None) and (bpy.context.active_object.type == 'GPENCIL')
+        materialsFound = materialsExist()
+
+        if gpFound is False:
             # the active object is not a grease pencil object, make sure it is!
             row = layout.row()
             row.label(text="Select or add Grease Pencil object to continue", icon='ERROR')
-            row = layout.row()
-            row.operator('object.gpencil_add')
-            return
         else:
             row = layout.row()
             row.label(text="Grease Pencil object found", icon='CHECKMARK')
 
         # From here on out we can assume we got a gp object that's a grease pencil
         # See if the material exist in the scene
-        if materialsExist() is False:
+        if materialsFound is False:
             row = layout.row()
-            row.label(text="Required materials not found!", icon='ERROR')
-            row = layout.row()
-            row.operator('pipecleaner.creatematerials')
-            return
+            row.label(text="Add required materials to continue", icon='ERROR')
         else:
             row = layout.row()
             row.label(text="Required GP Materials found", icon='CHECKMARK')
+
+        if materialsFound is False:
+            row = layout.row()
+            row.operator('pipecleaner.creatematerials', icon='MATERIAL_DATA')
+
+        if gpFound is False:
+            row = layout.row()
+            row.operator('object.gpencil_add', icon='OUTLINER_OB_GREASEPENCIL')
+
+        if gpFound is False or materialsFound is False:
+            return  # we can't continue until it's setup properly
+
+        # set intersection markers
+        row = layout.row()
+        row.operator("pipecleaner.detectintersectionmarkers", icon='SNAP_MIDPOINT')
+
+        # solve contours
+        row = layout.row()
+        row.operator("pipecleaner.solvecontours", icon="SPHERE")
+        
 
         # row = layout.row()
         # row.label(text="Pipecleaner Tools", icon='WORLD_DATA')
@@ -877,14 +910,14 @@ class PipecleanerPanel(bpy.types.Panel):
 def register():
     print('Registering Pipecleaner UI Panel & Operators')
     # bpy.utils.register_class(PipecleanerPanel)
-    for c in [PipecleanerPanel, Pipecleaner_CreateMaterialsOperator]:
+    for c in [PipecleanerPanel, Pipecleaner_CreateMaterialsOperator, Pipecleaner_DetectIntersectionMarkersOperator, Pipecleaner_SolveContoursOperator]:
         bpy.utils.register_class(c)
     print('Done.')
 
 
 def unregister():
     # HACK: make sure you've added all the operators to both REGISTER and UNREGISTER
-    for c in [PipecleanerPanel, Pipecleaner_CreateMaterialsOperator]:
+    for c in [PipecleanerPanel, Pipecleaner_CreateMaterialsOperator, Pipecleaner_DetectIntersectionMarkersOperator, Pipecleaner_SolveContoursOperator]:
         bpy.utils.unregister_class(c)
 
 if __name__ == "__main__":

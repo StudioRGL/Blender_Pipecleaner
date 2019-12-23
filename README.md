@@ -40,3 +40,4 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 ## Limitations
 
 - Only works when drawing from a perspective camera. Workaround: use a perspective camera far away to approximate orthographic behaviour if you need it
+- If there's already an existing material with one of the reserved names that is not a Grease Pencil Material, some functions will crash. Workaround: Don't do that...
