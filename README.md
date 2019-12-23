@@ -17,11 +17,13 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 - [ ] add operator for 'generate materials'
 - [ ] add operator for 'set strokes below threshold to intersectionMarkers'
 - [ ] add operator for 'generate'
+- [ ] maybe add operator for split/join strokes
 - [ ] add menu/ui
 - [ ] add addon stuff
 - [x] position intersection markers in 3D space?
 - [ ] finish readme.md!
 - [ ] clarify hasBeenPlaced vs hasBeenDefined
+- [ ] make it work with camera at origin
 
 ## Usage
 

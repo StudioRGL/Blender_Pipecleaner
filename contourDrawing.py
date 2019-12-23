@@ -59,6 +59,15 @@ def colinear(p0, p1, p2):
     return abs(x1 * y2 - x2 * y1) < 1e-12
 
 
+class materialNames(Enum):
+    """Get a dict of the required materials"""
+    x = 'contour_X',
+    y = 'contour_Y',
+    z = 'contour_Z',
+    arbitrary = 'contour_W',
+    intersection = 'contour_intersection'
+
+
 class StrokeType(Enum):
     marker           = 0
     planar_axial     = 1
@@ -396,15 +405,6 @@ class PlanarStroke(Stroke):
         else:
             return len(self.intersections) < len(other.intersections)
 
-    # TODO: this is duplicate functionality maybe? should just roll it into replane?
-    # def hasBeenDefined(self):
-    #    """ are we ready to replace, ie has the next thing up been placed?"""
-    #    if self.strokeType == StrokeType.planar_arbitrary:
-    #        pass # TODO check for at least 3 defined parents
-    #        return False
-    #    else:
-    #        return (self.normal != None) and (self.origin != None)
-
     def getScreenSpaceIntersections(self, other):
         """return list of screenspace coordinate of intersections if they intersect, otherwise []
         Needs to handle multiple intersections if they exist! """
@@ -520,7 +520,8 @@ class PlanarStroke(Stroke):
 
                 # check they're not colinear
                 if cross.length <= 0.002:  # sure, could use better epsilon, but the result's gonna be rubbish even if they're only *almost* colinear
-                    raise(Exception('Points are colinear, oh no'))  # TODO: do something useful instead of crashing
+                    # raise(Exception('Points are colinear, oh no'))  # TODO: do something useful instead of crashing
+                    return False  # TODO: temp HACK 
 
                 self.normal = cross
 
@@ -564,6 +565,7 @@ class PlanarStroke(Stroke):
             self.gpStroke.select = select
 # -------------------------------------------------------------------------------------------------------
 
+# USER INTERFACE FUNCTIONS
 
 def getActiveGreasePencilObject():
     gp = bpy.context.active_object
@@ -597,7 +599,7 @@ def getStrokeData(camera):
                     itsAMarker = False
                     # check material
                     materialIndex = stroke.material_index
-                    if materialIndex == gp.data.materials.keys().index('contour_intersection'):  # or nPoints < INTERSECTION_MARKER_THRESHOLD: # TODO: set up separate marker detection based on bbox
+                    if materialIndex == gp.data.materials.keys().index(materialNames.intersection):  # or nPoints < INTERSECTION_MARKER_THRESHOLD: # TODO: set up separate marker detection based on bbox
                         # it's an intersection marker
                         # set the material (maybe redundant)
                         itsAMarker = True
@@ -608,7 +610,7 @@ def getStrokeData(camera):
                         if bBoxArea < INTERSECTION_MARKER_THRESHOLD:
                             itsAMarker = True
                             # set the mat, cos it wasn't set
-                            stroke.material_index = gp.data.materials.keys().index('contour_intersection')  # by material name
+                            stroke.material_index = gp.data.materials.keys().index(materialNames.intersection)  # by material name
 
                     if itsAMarker:
                         # create an intersectionLine from it
@@ -620,13 +622,13 @@ def getStrokeData(camera):
 
                         normal = None
                         strokeType = StrokeType.planar_axial
-                        if materialIndex == gp.data.materials.keys().index('contour_X'):
+                        if materialIndex == gp.data.materials.keys().index(materialNames.x):
                             normal = Vector((1, 0, 0))
-                        elif materialIndex == gp.data.materials.keys().index('contour_Y'):
+                        elif materialIndex == gp.data.materials.keys().index(materialNames.y):
                             normal = Vector((0, 1, 0))
-                        elif materialIndex == gp.data.materials.keys().index('contour_Z'):
+                        elif materialIndex == gp.data.materials.keys().index(materialNames.z):
                             normal = Vector((0, 0, 1))
-                        elif materialIndex == gp.data.materials.keys().index('contour_W'):  # arbitrary plane!
+                        elif materialIndex == gp.data.materials.keys().index(materialNames.arbitrary):  # arbitrary plane!
                             normal = None
                             strokeType = StrokeType.planar_arbitrary
                         else:
@@ -681,6 +683,21 @@ def flattenAll():
             p.normal = (Vector((-1, 1, 0)))
             p.rePlane()
     pass
+
+
+def materialsExist():
+    """check if the materials exist in the scene"""
+    # TODO: write, connect
+
+
+def createMaterials():
+    """if the materials don't exist, create 'em"""
+    # TODO: write, connect
+
+
+def objectHasMaterialsAssigned():
+    """check if the active object has all the required materials assigned"""
+    # TODO: write, connect
 
 
 def solveContours():
@@ -749,9 +766,90 @@ def solveContours():
 
     return
 
+# OPERATORS ---------------
 
+
+class PipeCleaner_CreateMaterialsOperator(bpy.types.Operator):
+    """This adds the required special materials to the selected Grease Pencil Stroke"""
+    # TODO: write this!
+    bl_idname = "object.pipecleaner_creatematerials"
+    bl_label = "PipeCleaner_CreateMaterials"
+
+    def execute(self, context):
+        return {'FINISHED'}
+
+
+class PipeCleaner_DetectIntersectionMarkersOperator(bpy.types.Operator):
+    """Labels all small (in bounding box area) strokes as Intersection Markers"""
+    bl_idname = "object.pipecleaner_detectintersectionmarkers"
+    bl_label = "PipeCleaner_DetectIntersectionMarkers"
+
+    def execute(self, context):
+        return {'FINISHED'}
+
+
+class PipeCleaner_SolveContoursOperator(bpy.types.Operator):
+    """This solves the contours for the selected greasepencil object"""
+    # TODO: add options (like which camera to use, for example)
+    bl_idname = "object.pipecleaner_solvecontours"
+    bl_label = "PipeCleaner_SolveContours"
+
+    def execute(self, context):
+        return {'FINISHED'}
+
+
+# Based on blender's ui_panel_simple.py template
+class PipeCleanerPanel(bpy.types.Panel):
+    """Creates a Panel in the Object properties window"""
+    bl_label = "PipeCleaner Tools"
+    bl_idname = "OBJECT_PT_PipeCleanerPanel"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = 'data'
+
+    def draw(self, context):
+        # draw stuff
+
+        layout = self.layout
+        gp = bpy.context.active_object
+        if gp.type != 'GPENCIL':
+            # the active object is not a grease pencil object, make sure it is!
+            row = layout.row()
+            row.label(text="Select or create a Grease Pencil object to continue")
+            row = layout.row()
+            row.operator('object.gpencil_add')
+            return
+
+        # From here on out we can assume we got a gp object that's a grease pencil
+        # See if the material exist in the scene
+
+        # row = layout.row()
+        # row.label(text="PipeCleaner Tools", icon='WORLD_DATA')
+        # row = layout.row()
+        # row.label(text="Active object is: " + obj.name)
+        # row = layout.row()
+        # row.prop(obj, "name")
+
+
+def register():
+    print('Registering PipeCleaner UI Panel')
+    bpy.utils.register_class(PipeCleanerPanel)
+    print('Done.')
+
+
+def unregister():
+    bpy.utils.unregister_class(PipeCleanerPanel)
+
+
+if __name__ == "__main__":
+    register()
+
+
+
+
+register()
 # flattenAll()
-solveContours()
+#solveContours()
 
 
 print('Finished running code.')
