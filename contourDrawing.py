@@ -861,6 +861,7 @@ class PipecleanerPanel(bpy.types.Panel):
         layout = self.layout
         gpFound = (bpy.context.active_object!=None) and (bpy.context.active_object.type == 'GPENCIL')
         materialsFound = materialsExist()
+        #materialsAssigned = 
 
         if gpFound is False:
             # the active object is not a grease pencil object, make sure it is!
