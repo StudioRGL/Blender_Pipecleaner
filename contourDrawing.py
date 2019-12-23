@@ -337,7 +337,6 @@ class Stroke():
 
     def rePlane(self):
         """separated this out, it now assumes you've already specified the ORIGIN and the NORMAL"""
-        # TODO: initialise the marker strokes to just point along the camera vector
         # so, once we know the normal and origin, for every point:
         for point in self.gpStroke.points.values():
             # we know the line it's on (from the camera origin, through the world point (assuming it's different)
@@ -513,12 +512,15 @@ class PlanarStroke(Stroke):
                 testPoints = anchorPoints[:3]  # should work, right!
                 v1 = testPoints[1] - testPoints[0]
                 v2 = testPoints[2] - testPoints[0]
+                # TODO: check if they're different yo!
+                v1.normalize()
+                v2.normalize()
 
                 cross = v1.cross(v2)
-                if cross.length <= 0.00001:  # sure, could use better epsilon, but the result's gonna be rubbish even if they're only *almost* colinear
-                    raise(Exception('Points are colinear, oh no'))  # TODO: do something useful instead of crashing
+
                 # check they're not colinear
-                c = colinear(testPoints[0], testPoints[1], testPoints[2])
+                if cross.length <= 0.002:  # sure, could use better epsilon, but the result's gonna be rubbish even if they're only *almost* colinear
+                    raise(Exception('Points are colinear, oh no'))  # TODO: do something useful instead of crashing
 
                 self.normal = cross
 

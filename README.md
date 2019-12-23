@@ -19,9 +19,9 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 - [ ] add operator for 'generate'
 - [ ] add menu/ui
 - [ ] add addon stuff
-- [ ] position intersection markers in 3D space?
+- [x] position intersection markers in 3D space?
 - [ ] finish readme.md!
-- [ ] clarify hasBeenPlaced (no longer required?) vs hasBeenDefined
+- [ ] clarify hasBeenPlaced vs hasBeenDefined
 
 ## Usage
 
