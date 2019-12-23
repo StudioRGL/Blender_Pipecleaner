@@ -62,13 +62,15 @@ def colinear(p0, p1, p2):
 
 class materialNames():
     """Get a dict of the required materials"""
+    # TODO: this seems like a sloppy way of doing this, what's the proper way of doing this?
     def __init__(self):
-        self.x = 'contour_X',
-        self.y = 'contour_Y',
-        self.z = 'contour_Z',
-        self.arbitrary = 'contour_W',
+        self.x = 'contour_X'
+        self.y = 'contour_Y'
+        self.z = 'contour_Z'
+        self.arbitrary = 'contour_W'
         self.intersection = 'contour_intersection'
-        self.allMaterialNames = [self.x, self.y, self.z, self.arbitrary, self.intersection]
+        self.rough = 'contour_rough'
+        self.allMaterialNames = [self.x, self.y, self.z, self.arbitrary, self.intersection, self.rough]
 
 
 class StrokeType(Enum):
@@ -697,8 +699,29 @@ def materialsExist():
     return True
 
 
+def createMaterial(materialName, color):
+    if materialName in bpy.data.materials:
+        return  # if we already got this one, don't bother
+    mat = bpy.data.materials.new(name=materialName)
+    mat.use_fake_user = True
+    # mat.is_grease_pencil = True
+    # mat.grease_pencil.show_stroke = True
+    # mat.grease_pencil.stroke_style = 'SOLID'
+    # mat.grease_pencil.color = [0,1,0,1] # RGBA
+    # mat.grease_pencil.show_fill   = False
+
+
 def createMaterials():
     """if the materials don't exist, create 'em"""
+    # mesh = bpy.data.meshes.new(name="New Object Mesh")
+    # mesh.from_pydata(verts, edges, faces)
+    # object_data_add(context, mesh, operator=self)
+    createMaterial(materialNames().x, [1, 0, 0, 1])
+    createMaterial(materialNames().y, [0, 1, 0, 1])
+    createMaterial(materialNames().z, [0, 0, 1, 1])
+    createMaterial(materialNames().arbitrary, [1, 0, 1, 1])
+    createMaterial(materialNames().intersection, [0, 1, 1, 1])
+    createMaterial(materialNames().rough, [0, 0, 0, 0.5])
     # TODO: write, connect
 
 
@@ -776,40 +799,41 @@ def solveContours():
 # OPERATORS ---------------
 
 
-class PipeCleaner_CreateMaterialsOperator(bpy.types.Operator):
+class Pipecleaner_CreateMaterialsOperator(bpy.types.Operator):
     """This adds the required special materials to the selected Grease Pencil Stroke"""
     # TODO: write this!
-    bl_idname = "object.pipecleaner_creatematerials"
-    bl_label = "PipeCleaner_CreateMaterials"
+    bl_idname = "pipecleaner.creatematerials"
+    bl_label = "Create Materials"
 
     def execute(self, context):
+        createMaterials()
         return {'FINISHED'}
 
 
-class PipeCleaner_DetectIntersectionMarkersOperator(bpy.types.Operator):
+class Pipecleaner_DetectIntersectionMarkersOperator(bpy.types.Operator):
     """Labels all small (in bounding box area) strokes as Intersection Markers"""
-    bl_idname = "object.pipecleaner_detectintersectionmarkers"
-    bl_label = "PipeCleaner_DetectIntersectionMarkers"
+    bl_idname = "pipecleaner.detectintersectionmarkers"
+    bl_label = "Pipecleaner_DetectIntersectionMarkers"
 
     def execute(self, context):
         return {'FINISHED'}
 
 
-class PipeCleaner_SolveContoursOperator(bpy.types.Operator):
+class Pipecleaner_SolveContoursOperator(bpy.types.Operator):
     """This solves the contours for the selected greasepencil object"""
     # TODO: add options (like which camera to use, for example)
-    bl_idname = "object.pipecleaner_solvecontours"
-    bl_label = "PipeCleaner_SolveContours"
+    bl_idname = "pipecleaner.solvecontours"
+    bl_label = "Pipecleaner_SolveContours"
 
     def execute(self, context):
         return {'FINISHED'}
 
 
 # Based on blender's ui_panel_simple.py template
-class PipeCleanerPanel(bpy.types.Panel):
+class PipecleanerPanel(bpy.types.Panel):
     """Creates a Panel in the Object properties window"""
-    bl_label = "PipeCleaner Tools"
-    bl_idname = "OBJECT_PT_PipeCleanerPanel"
+    bl_label = "Pipecleaner Tools"
+    bl_idname = "Pipecleaner_ToolPanel"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = 'data'
@@ -822,22 +846,28 @@ class PipeCleanerPanel(bpy.types.Panel):
         if gp.type != 'GPENCIL':
             # the active object is not a grease pencil object, make sure it is!
             row = layout.row()
-            row.label(text="Select or create a Grease Pencil object to continue")
+            row.label(text="Select or add Grease Pencil object to continue", icon='ERROR')
             row = layout.row()
             row.operator('object.gpencil_add')
             return
+        else:
+            row = layout.row()
+            row.label(text="Grease Pencil object found", icon='CHECKMARK')
 
         # From here on out we can assume we got a gp object that's a grease pencil
         # See if the material exist in the scene
         if materialsExist() is False:
             row = layout.row()
-            row.label(text="Materials not found! Create correctly-named materials to continue")
+            row.label(text="Required materials not found!", icon='ERROR')
+            row = layout.row()
+            row.operator('pipecleaner.creatematerials')
+            return
         else:
             row = layout.row()
-            row.label(text="Materials found")
+            row.label(text="Required GP Materials found", icon='CHECKMARK')
 
         # row = layout.row()
-        # row.label(text="PipeCleaner Tools", icon='WORLD_DATA')
+        # row.label(text="Pipecleaner Tools", icon='WORLD_DATA')
         # row = layout.row()
         # row.label(text="Active object is: " + obj.name)
         # row = layout.row()
@@ -845,14 +875,17 @@ class PipeCleanerPanel(bpy.types.Panel):
 
 
 def register():
-    print('Registering PipeCleaner UI Panel')
-    bpy.utils.register_class(PipeCleanerPanel)
+    print('Registering Pipecleaner UI Panel & Operators')
+    # bpy.utils.register_class(PipecleanerPanel)
+    for c in [PipecleanerPanel, Pipecleaner_CreateMaterialsOperator]:
+        bpy.utils.register_class(c)
     print('Done.')
 
 
 def unregister():
-    bpy.utils.unregister_class(PipeCleanerPanel)
-
+    # HACK: make sure you've added all the operators to both REGISTER and UNREGISTER
+    for c in [PipecleanerPanel, Pipecleaner_CreateMaterialsOperator]:
+        bpy.utils.unregister_class(c)
 
 if __name__ == "__main__":
     register()
