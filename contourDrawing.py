@@ -59,7 +59,6 @@ def colinear(p0, p1, p2):
     return abs(x1 * y2 - x2 * y1) < 1e-12
 
 
-
 class materialNames():
     """Get a dict of the required materials"""
     # TODO: this seems like a sloppy way of doing this, what's the proper way of doing this?
@@ -527,7 +526,7 @@ class PlanarStroke(Stroke):
                 # check they're not colinear
                 if cross.length <= 0.002:  # sure, could use better epsilon, but the result's gonna be rubbish even if they're only *almost* colinear
                     # raise(Exception('Points are colinear, oh no'))  # TODO: do something useful instead of crashing
-                    return False  # TODO: temp HACK 
+                    return False  # TODO: temp HACK
 
                 self.normal = cross
 
@@ -573,14 +572,16 @@ class PlanarStroke(Stroke):
 
 # USER INTERFACE FUNCTIONS
 
+
 def convertSmallStrokesToMarkers():
     """takes any stroke below a certain polar bounding box size and sets its material to be the intersection material"""
     return
 
+
 def getActiveGreasePencilObject():
     gp = bpy.context.active_object
     if gp.type != 'GPENCIL':
-        raise(Exception("make sure you have a gpencil object active"))
+        return None # raise(Exception("NO ACTIVE GPENCIL OBJECT"))
     return gp
 
 
@@ -591,6 +592,8 @@ def getStrokeData(camera):
     INTERSECTION_MARKER_THRESHOLD = 0.1  # this is now in ANGULAR AREA
 
     gp = getActiveGreasePencilObject()
+    if gp is None:
+        raise(Exception("NO ACTIVE GPENCIL OBJECT"))
 
     # layer = gp.data.layers.active # nah let's do all layers
     for layer in gp.data.layers:
@@ -679,29 +682,61 @@ def getClusters(planarStrokes):
     print('done, found', len(clusters), ' clusters')
     return clusters
 
-
-def flattenAll():
-    """ just for testing really?"""
-    camera = Camera(bpy.context.scene.camera)
-    gp = getActiveGreasePencilObject()
-    layer = gp.data.layers.active
-    frames = layer.frames.values()
-    for frame in frames:
-        for stroke in frame.strokes.values():
-            p = PlanarStroke(stroke, camera)
-            p.origin = Vector((0, 2, 0))
-            p.normal = (Vector((-1, 1, 0)))
-            p.rePlane()
-    pass
-
-
 def materialsExist():
     """check if the materials exist in the scene"""
+    # TODO: check that these are GREASE PENCIL materials
     materialsInScene = bpy.data.materials.keys()
     for materialName in materialNames().allMaterialNames:
         if materialName not in materialsInScene:
             return False
     return True
+
+
+def materialsAssigned():
+    """Check if these materials are assigned to the current GP stroke"""
+
+    gp = getActiveGreasePencilObject()
+    if gp is None:
+        return False
+
+    # sanity check, this should have already been tested before we get here
+    # if gp is None:
+    #     # raise(Exception("can't check materials, this isn't an object"))
+    #     return False
+    # if gp.type != "GREASE_PENCIL":
+    #     # raise(Exception("can't check materials, this isn't a grease pencil object"))
+    #     return False
+
+    if materialsExist() is False:
+        return False
+
+    for mat in materialNames().allMaterialNames:
+        if bpy.data.materials[mat] not in gp.data.materials.keys():  # TODO: doesn't check if mat is IN .materials, it should be if we called this in the right place though
+            return False
+
+    return True
+
+
+def assignMaterials():
+    """assign materials to the active object"""
+    gp = bpy.context.active_object
+
+    # sanity check, this should have already been tested before we get here
+    if gp is None:
+        # raise(Exception("can't check materials, this isn't an object"))
+        return False
+    if gp.type != "GREASE_PENCIL":
+        # raise(Exception("can't check materials, this isn't a grease pencil object"))
+        return False
+
+    for mat in materialNames().allMaterialNames:
+        matData = bpy.data.materials[mat]
+        if matData is None:
+            return False
+        if matData not in gp.data.materials:  # TODO: doesn't check if mat is IN .materials, it should be if we called this in the right place though
+            return False
+        gp.data.materials.append(matData)
+
 
 
 def createMaterial(materialName, color):
@@ -712,7 +747,7 @@ def createMaterial(materialName, color):
     bpy.data.materials.create_gpencil_data(mat)
     mat.grease_pencil.show_stroke = True
     mat.grease_pencil.stroke_style = 'SOLID'
-    mat.grease_pencil.color = color # RGBA
+    mat.grease_pencil.color = color  # RGBA
     mat.grease_pencil.show_fill   = False
 
 
@@ -733,6 +768,16 @@ def createMaterials():
 def objectHasMaterialsAssigned():
     """check if the active object has all the required materials assigned"""
     # TODO: write, connect
+
+
+def uiChecklist(layout, text, check):
+    """simple checklist generator"""
+    row = layout.row()
+    if check:
+        icon = "CHECKBOX_HLT"
+    else:
+        icon = "CHECKBOX_DEHLT"
+    row.label(text=text, icon=icon)
 
 
 def solveContours():
@@ -818,11 +863,12 @@ class Pipecleaner_CreateMaterialsOperator(bpy.types.Operator):
 class Pipecleaner_AssignMaterialsOperator(bpy.types.Operator):
     """This assigns the required special materials to the selected Grease Pencil Stroke"""
     # TODO: write this!
-    bl_idname = "pipecleaner.creatematerials"
+    bl_idname = "pipecleaner.assignmaterials"
     bl_label = "Assign Materials to Stroke"
 
     def execute(self, context):
-        #createMaterials()
+        # createMaterials()
+        assignMaterials()
         return {'FINISHED'}
 
 
@@ -851,44 +897,39 @@ class PipecleanerPanel(bpy.types.Panel):
     """Creates a Panel in the Object properties window"""
     bl_label = "Pipecleaner Tools"
     bl_idname = "Pipecleaner_ToolPanel"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = 'data'
+    bl_space_type = 'VIEW_3D'  # 'PROPERTIES'
+    bl_region_type = 'UI'  # 'WINDOW' #  ('WINDOW', 'HEADER', 'CHANNELS', 'TEMPORARY', 'UI', 'TOOLS', 'TOOL_PROPS', 'PREVIEW', 'HUD', 'NAVIGATION_BAR', 'EXECUTE', 'FOOTER', 'TOOL_HEADER')
+    bl_category = 'Edit'  # 'Pipecleaner Tools'
+    #bl_context = 'data'
 
     def draw(self, context):
+        # let's check if we have what we need
+        gpFound = (bpy.context.active_object is not None) and (bpy.context.active_object.type == 'GPENCIL')
+        materialsFound = materialsExist()  # TODO: name functions/variables more consistently
+        materialsAreAssigned = materialsAssigned()
+
         # draw stuff
-
         layout = self.layout
-        gpFound = (bpy.context.active_object!=None) and (bpy.context.active_object.type == 'GPENCIL')
-        materialsFound = materialsExist()
-        #materialsAssigned = 
 
-        if gpFound is False:
-            # the active object is not a grease pencil object, make sure it is!
-            row = layout.row()
-            row.label(text="Select or add Grease Pencil object to continue", icon='ERROR')
-        else:
-            row = layout.row()
-            row.label(text="Grease Pencil object found", icon='CHECKMARK')
+        # checklist of things
+        uiChecklist(layout, "Grease Pencil stroke active", gpFound)
+        uiChecklist(layout, "Materials created", materialsFound)
+        uiChecklist(layout, "Materials assigned", materialsAreAssigned)
 
-        # From here on out we can assume we got a gp object that's a grease pencil
-        # See if the material exist in the scene
-        if materialsFound is False:
-            row = layout.row()
-            row.label(text="Add required materials to continue", icon='ERROR')
-        else:
-            row = layout.row()
-            row.label(text="Required GP Materials found", icon='CHECKMARK')
-
-        if materialsFound is False:
-            row = layout.row()
-            row.operator('pipecleaner.creatematerials', icon='MATERIAL_DATA')
-
+        # create buttons if we need 'em
         if gpFound is False:
             row = layout.row()
             row.operator('object.gpencil_add', icon='OUTLINER_OB_GREASEPENCIL')
 
-        if gpFound is False or materialsFound is False:
+        if materialsFound is False:
+            row = layout.row()
+            row.operator('pipecleaner.creatematerials', icon='NODE_MATERIAL')
+
+        if materialsAreAssigned is False:
+            row = layout.row()
+            row.operator('pipecleaner.assignmaterials', icon='MATERIAL')
+
+        if gpFound is False or materialsFound is False or materialsAreAssigned is False:
             return  # we can't continue until it's setup properly
 
         # set intersection markers
@@ -898,7 +939,6 @@ class PipecleanerPanel(bpy.types.Panel):
         # solve contours
         row = layout.row()
         row.operator("pipecleaner.solvecontours", icon="SPHERE")
-        
 
         # row = layout.row()
         # row.label(text="Pipecleaner Tools", icon='WORLD_DATA')
@@ -911,25 +951,24 @@ class PipecleanerPanel(bpy.types.Panel):
 def register():
     print('Registering Pipecleaner UI Panel & Operators')
     # bpy.utils.register_class(PipecleanerPanel)
-    for c in [PipecleanerPanel, Pipecleaner_CreateMaterialsOperator, Pipecleaner_DetectIntersectionMarkersOperator, Pipecleaner_SolveContoursOperator]:
+    for c in [PipecleanerPanel, Pipecleaner_CreateMaterialsOperator, Pipecleaner_AssignMaterialsOperator, Pipecleaner_DetectIntersectionMarkersOperator, Pipecleaner_SolveContoursOperator]:
         bpy.utils.register_class(c)
     print('Done.')
 
 
 def unregister():
     # HACK: make sure you've added all the operators to both REGISTER and UNREGISTER
-    for c in [PipecleanerPanel, Pipecleaner_CreateMaterialsOperator, Pipecleaner_DetectIntersectionMarkersOperator, Pipecleaner_SolveContoursOperator]:
+    for c in [PipecleanerPanel, Pipecleaner_CreateMaterialsOperator, Pipecleaner_AssignMaterialsOperator, Pipecleaner_DetectIntersectionMarkersOperator, Pipecleaner_SolveContoursOperator]:
         bpy.utils.unregister_class(c)
+
 
 if __name__ == "__main__":
     register()
 
 
-
-
 register()
 # flattenAll()
-#solveContours()
+# solveContours()
 
 
 print('Finished running code.')
