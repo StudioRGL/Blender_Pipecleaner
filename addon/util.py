@@ -9,6 +9,7 @@ import sys
 
 print('loading util.py...')
 
+
 def polarToCartesian(r, phi, theta):  # theta = v, phi = u
     """radius r, inclination theta, azimuth phi in DEGREES"""
     # https://en.wikipedia.org/wiki/Spherical_coordinate_system#Cartesian_coordinates
@@ -576,15 +577,18 @@ class PlanarStroke(Stroke):
 # USER INTERFACE FUNCTIONS
 
 
-def convertSmallStrokesToMarkers():
+def convertSmallStrokesToMarkers(threshold=1):
     """takes any stroke below a certain polar bounding box size and sets its material to be the intersection material"""
+
     return
 
 
 def getActiveGreasePencilObject():
     gp = bpy.context.active_object
+    if gp is None:
+        return None
     if gp.type != 'GPENCIL':
-        return None # raise(Exception("NO ACTIVE GPENCIL OBJECT"))
+        return None  # raise(Exception("NO ACTIVE GPENCIL OBJECT"))
     return gp
 
 
@@ -685,6 +689,7 @@ def getClusters(planarStrokes):
     print('done, found', len(clusters), ' clusters')
     return clusters
 
+
 def materialsExist():
     """check if the materials exist in the scene"""
     # TODO: check that these are GREASE PENCIL materials
@@ -714,7 +719,7 @@ def materialsAssigned():
         return False
 
     for mat in materialNames().allMaterialNames:
-        if bpy.data.materials[mat] not in gp.data.materials.keys():  # TODO: doesn't check if mat is IN .materials, it should be if we called this in the right place though
+        if mat not in gp.data.materials.keys():  # TODO: doesn't check if mat is IN .materials, it should be if we called this in the right place though
             return False
 
     return True
@@ -728,18 +733,19 @@ def assignMaterials():
     if gp is None:
         # raise(Exception("can't check materials, this isn't an object"))
         return False
-    if gp.type != "GREASE_PENCIL":
+    if gp.type != "GPENCIL":
         # raise(Exception("can't check materials, this isn't a grease pencil object"))
         return False
 
     for mat in materialNames().allMaterialNames:
-        matData = bpy.data.materials[mat]
+        matData = bpy.data.materials[mat]  # TODO: check it's in there!
         if matData is None:
             return False
-        if matData not in gp.data.materials:  # TODO: doesn't check if mat is IN .materials, it should be if we called this in the right place though
-            return False
-        gp.data.materials.append(matData)
-
+        if mat not in gp.data.materials.keys():
+            gp.data.materials.append(matData)
+            # return False
+        # gp.data.materials.append(matData)
+    return True
 
 
 def createMaterial(materialName, color):

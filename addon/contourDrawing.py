@@ -6,7 +6,8 @@ from .util import *
 # OPERATORS ---------------
 # __reload_order_index__ = 1
 
-print ('loading contourDrawing')
+print('loading contourDrawing')
+
 
 class Pipecleaner_CreateMaterialsOperator(bpy.types.Operator):
     """This adds the required special materials to the scene"""
@@ -35,10 +36,16 @@ class Pipecleaner_DetectIntersectionMarkersOperator(bpy.types.Operator):
     """Labels all small (in bounding box area) strokes as Intersection Markers"""
     bl_idname = "pipecleaner.detectintersectionmarkers"
     bl_label = "Detect Intersection Markers"
+    bl_options = {"REGISTER", "UNDO"}
+    param_threshold: bpy.props.FloatProperty(name="Threshold") = 1.0
 
     def execute(self, context):
-        convertSmallStrokesToMarkers()
+        convertSmallStrokesToMarkers(param_threshold)
         return {'FINISHED'}
+
+    # def invoke(self, context, event):
+    #    wm = context.window_manager
+    #    return wm.invoke_props_dialog(self)
 
 
 class Pipecleaner_SolveContoursOperator(bpy.types.Operator):
@@ -48,6 +55,7 @@ class Pipecleaner_SolveContoursOperator(bpy.types.Operator):
     bl_label = "Solve Contours"
 
     def execute(self, context):
+        solveContours()
         return {'FINISHED'}
 
 
@@ -59,7 +67,7 @@ class PipecleanerPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'  # 'PROPERTIES'
     bl_region_type = 'UI'  # 'WINDOW' #  ('WINDOW', 'HEADER', 'CHANNELS', 'TEMPORARY', 'UI', 'TOOLS', 'TOOL_PROPS', 'PREVIEW', 'HUD', 'NAVIGATION_BAR', 'EXECUTE', 'FOOTER', 'TOOL_HEADER')
     bl_category = 'Edit'  # 'Pipecleaner Tools'
-    #bl_context = 'data'
+    # bl_context = 'data'
 
     def draw(self, context):
         # let's check if we have what we need
@@ -88,6 +96,10 @@ class PipecleanerPanel(bpy.types.Panel):
             row = layout.row()
             row.operator('pipecleaner.assignmaterials', icon='MATERIAL')
 
+        # Camera
+        row = layout.row()
+        row.operator_menu_enum("object.select_object", "select_objects", text="Select camera")
+
         if gpFound is False or materialsFound is False or materialsAreAssigned is False:
             return  # we can't continue until it's setup properly
 
@@ -113,18 +125,18 @@ class PipecleanerPanel(bpy.types.Panel):
 #     for c in [PipecleanerPanel, Pipecleaner_CreateMaterialsOperator, Pipecleaner_AssignMaterialsOperator, Pipecleaner_DetectIntersectionMarkersOperator, Pipecleaner_SolveContoursOperator]:
 #         bpy.utils.register_class(c)
 #     print('Done.')
-# 
-# 
+#
+#
 # def unregister():
 #     # HACK: make sure you've added all the operators to both REGISTER and UNREGISTER
 #     for c in [PipecleanerPanel, Pipecleaner_CreateMaterialsOperator, Pipecleaner_AssignMaterialsOperator, Pipecleaner_DetectIntersectionMarkersOperator, Pipecleaner_SolveContoursOperator]:
 #         bpy.utils.unregister_class(c)
-# 
-# 
+#
+#
 # if __name__ == "__main__":
 #     register()
-# 
-# 
+#
+#
 # register()
 # flattenAll()
 # solveContours()
