@@ -17,7 +17,7 @@ class Pipecleaner_CreateMaterialsOperator(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return materialsExist()==False
+        return materialsExist() is False
 
     def execute(self, context):
         createMaterials()
@@ -67,6 +67,7 @@ class Pipecleaner_SolveContoursOperator(bpy.types.Operator):
         solveContours()
         return {'FINISHED'}
 
+
 class PipeCleaner_SetMaterialX(bpy.types.Operator):
     """Sets the active material to X, if it exists and we're in stroke mode"""
     bl_idname = "pipecleaner.setmaterial_x"
@@ -79,6 +80,7 @@ class PipeCleaner_SetMaterialX(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         return readyToSetActiveMaterial(materialNames().x)
+
 
 class PipeCleaner_SetMaterialY(bpy.types.Operator):
     """Sets the active material to Y, if it exists and we're in stroke mode"""
@@ -150,8 +152,6 @@ class PipeCleaner_SetMaterialRough(bpy.types.Operator):
         return readyToSetActiveMaterial(materialNames().rough)
 
 
-
-
 # Based on blender's ui_panel_simple.py template
 class PipecleanerPanel(bpy.types.Panel):
     """Creates a Panel in the Object properties window"""
@@ -176,8 +176,6 @@ class PipecleanerPanel(bpy.types.Panel):
 
         layout = self.layout
 
-
-
         # SETUP dropdown
         box = uiDropDown(layout, properties, "panelExpanded_setup", properties.panelExpanded_setup, "Setup")
 
@@ -191,7 +189,7 @@ class PipecleanerPanel(bpy.types.Panel):
             uiChecklist(box, "Ready!", isReadyToSolve)
 
             # get the camera
-            box.prop_search(properties, "camera", bpy.data, "cameras", icon = 'CAMERA_DATA')  # select camera!
+            box.prop_search(properties, "camera", bpy.data, "cameras", icon='CAMERA_DATA')  # select camera!
 
             row = box.row()
             # row.enabled = gpFound is False
@@ -222,7 +220,6 @@ class PipecleanerPanel(bpy.types.Panel):
 
         # SETUP dropdown
         box = uiDropDown(layout, properties, "panelExpanded_edit", properties.panelExpanded_edit, "Edit")
-
 
         # SOLVE dropdown
         box = uiDropDown(layout, properties, "panelExpanded_solve", properties.panelExpanded_solve, "Solve")

@@ -783,6 +783,7 @@ def cameraChosen():
     c = bpy.context.scene.pipecleaner_properties.camera
     return c is not ""
 
+
 def readyToSolve():
     """Checks for the whole load of conditions that need to be true before we can solve"""
     gpFound = getActiveGreasePencilObject() is not None
@@ -913,15 +914,3 @@ def solveContours():
             stroke.highlight(select=select)
 
     return
-
-
-# class MaterialSetter():
-#     """gets inherited by the material setters"""
-#     def __init__(self):
-#         self.matName = None# 
-
-#     def setMaterial():
-#         setActiveMaterial(self.matName)# 
-
-#     def materialSetterPoll():
-#         return materialsAssigned()
