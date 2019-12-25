@@ -783,6 +783,40 @@ def cameraChosen():
     c = bpy.context.scene.pipecleaner_properties.camera
     return c is not ""
 
+def readyToSolve():
+    """Checks for the whole load of conditions that need to be true before we can solve"""
+    gpFound = getActiveGreasePencilObject() is not None
+    materialsFound = materialsExist()  # TODO: name functions/variables more consistently
+    materialsAreAssigned = materialsAssigned()
+    cameraIsChosen = cameraChosen()
+    readyToSolve = gpFound and materialsFound and materialsAreAssigned and cameraIsChosen
+    return readyToSolve
+
+
+def setActiveMaterial(materialEnum):
+    """set the active material"""
+    # TODO: finish and connect
+    # materialIndex =
+    gp = getActiveGreasePencilObject()
+    materialsAreAssigned = materialsAssigned()
+
+    if gp is None or materialsAssigned is False:
+        return None
+
+    materialIndex = gp.material_slots.keys().index(materialEnum)
+    bpy.context.object.active_material_index = materialIndex
+
+
+def readyToSetActiveMaterial(materialEnum):
+    if (materialsAssigned()) and (bpy.context.mode == 'PAINT_GPENCIL'):
+        gp = getActiveGreasePencilObject()  # don't need to check that cos materials assigned should already
+        if gp.active_material.name == materialEnum:
+            return False  # can't set it if it's already set
+        else:
+            return True
+    else:
+        return False
+
 
 def uiChecklist(layout, text, check):
     """simple checklist generator"""
@@ -879,3 +913,15 @@ def solveContours():
             stroke.highlight(select=select)
 
     return
+
+
+# class MaterialSetter():
+#     """gets inherited by the material setters"""
+#     def __init__(self):
+#         self.matName = None# 
+
+#     def setMaterial():
+#         setActiveMaterial(self.matName)# 
+
+#     def materialSetterPoll():
+#         return materialsAssigned()

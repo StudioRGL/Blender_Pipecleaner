@@ -17,6 +17,8 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 - [x] add operator for 'generate materials'
 - [ ] add operator for 'set strokes below threshold to intersectionMarkers'
 - [ ] add operator for 'generate'
+- [ ] add operator for 'view cam'
+- [ ] add operator for each material
 - [ ] maybe add operator for split/join strokes
 - [ ] add menu/ui
 - [x] add addon stuff

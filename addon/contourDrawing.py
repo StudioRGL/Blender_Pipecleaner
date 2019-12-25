@@ -67,6 +67,90 @@ class Pipecleaner_SolveContoursOperator(bpy.types.Operator):
         solveContours()
         return {'FINISHED'}
 
+class PipeCleaner_SetMaterialX(bpy.types.Operator):
+    """Sets the active material to X, if it exists and we're in stroke mode"""
+    bl_idname = "pipecleaner.setmaterial_x"
+    bl_label = 'X'
+
+    def execute(self, context):
+        setActiveMaterial(materialNames().x)
+        return{'FINISHED'}
+
+    @classmethod
+    def poll(cls, context):
+        return readyToSetActiveMaterial(materialNames().x)
+
+class PipeCleaner_SetMaterialY(bpy.types.Operator):
+    """Sets the active material to Y, if it exists and we're in stroke mode"""
+    bl_idname = "pipecleaner.setmaterial_y"
+    bl_label = 'Y'
+
+    def execute(self, context):
+        setActiveMaterial(materialNames().y)
+        return{'FINISHED'}
+
+    @classmethod
+    def poll(cls, context):
+        return readyToSetActiveMaterial(materialNames().y)
+
+
+class PipeCleaner_SetMaterialZ(bpy.types.Operator):
+    """Sets the active material to Z, if it exists and we're in stroke mode"""
+    bl_idname = "pipecleaner.setmaterial_z"
+    bl_label = 'Z'
+
+    def execute(self, context):
+        setActiveMaterial(materialNames().z)
+        return{'FINISHED'}
+
+    @classmethod
+    def poll(cls, context):
+        return readyToSetActiveMaterial(materialNames().z)
+
+
+class PipeCleaner_SetMaterialArbitrary(bpy.types.Operator):
+    """Sets the active material to Arbitrary, if it exists and we're in stroke mode"""
+    bl_idname = "pipecleaner.setmaterial_arbitrary"
+    bl_label = 'Arbitrary'
+
+    def execute(self, context):
+        setActiveMaterial(materialNames().arbitrary)
+        return{'FINISHED'}
+
+    @classmethod
+    def poll(cls, context):
+        return readyToSetActiveMaterial(materialNames().arbitrary)
+
+
+class PipeCleaner_SetMaterialIntersection(bpy.types.Operator):
+    """Sets the active material to Intersection, if it exists and we're in stroke mode"""
+    bl_idname = "pipecleaner.setmaterial_intersection"
+    bl_label = 'Intersection'
+
+    def execute(self, context):
+        setActiveMaterial(materialNames().intersection)
+        return{'FINISHED'}
+
+    @classmethod
+    def poll(cls, context):
+        return readyToSetActiveMaterial(materialNames().intersection)
+
+
+class PipeCleaner_SetMaterialRough(bpy.types.Operator):
+    """Sets the active material to Rough, if it exists and we're in stroke mode"""
+    bl_idname = "pipecleaner.setmaterial_rough"
+    bl_label = 'Rough'
+
+    def execute(self, context):
+        setActiveMaterial(materialNames().rough)
+        return{'FINISHED'}
+
+    @classmethod
+    def poll(cls, context):
+        return readyToSetActiveMaterial(materialNames().rough)
+
+
+
 
 # Based on blender's ui_panel_simple.py template
 class PipecleanerPanel(bpy.types.Panel):
@@ -84,6 +168,7 @@ class PipecleanerPanel(bpy.types.Panel):
         materialsFound = materialsExist()  # TODO: name functions/variables more consistently
         materialsAreAssigned = materialsAssigned()
         cameraIsChosen = cameraChosen()
+        isReadyToSolve = readyToSolve()
 
         # draw stuff
         scene = context.scene
@@ -91,60 +176,57 @@ class PipecleanerPanel(bpy.types.Panel):
 
         layout = self.layout
 
-        # checklist of things
-        uiChecklist(layout, "Grease Pencil stroke active", gpFound)
-        uiChecklist(layout, "Materials created", materialsFound)
-        uiChecklist(layout, "Materials assigned", materialsAreAssigned)
-        uiChecklist(layout, "Camera specified", cameraIsChosen)
-        uiChecklist(layout, "Ready!", gpFound and materialsFound and materialsAreAssigned and cameraIsChosen)
 
-        # Setup dropdown
+
+        # SETUP dropdown
         box = uiDropDown(layout, properties, "panelExpanded_setup", properties.panelExpanded_setup, "Setup")
 
         if properties.panelExpanded_setup:
+
+            # checklist of things
+            uiChecklist(box, "Grease Pencil stroke active", gpFound)
+            uiChecklist(box, "Materials created", materialsFound)
+            uiChecklist(box, "Materials assigned", materialsAreAssigned)
+            uiChecklist(box, "Camera specified", cameraIsChosen)
+            uiChecklist(box, "Ready!", isReadyToSolve)
+
             # get the camera
             box.prop_search(properties, "camera", bpy.data, "cameras", icon = 'CAMERA_DATA')  # select camera!
 
             row = box.row()
-            row.enabled = gpFound is False
+            # row.enabled = gpFound is False
             row.operator('object.gpencil_add', icon='OUTLINER_OB_GREASEPENCIL')
 
-            # if materialsFound is False:
+            row = box.row()
+            row.operator('object.camera_add', icon='OUTLINER_OB_CAMERA')
+
             row = box.row()
             row.operator('pipecleaner.creatematerials', icon='NODE_MATERIAL')
-
 
             row = box.row()
             row.operator('pipecleaner.assignmaterials', icon='MATERIAL')
 
-        # Solve dropdown
+        # DRAW dropdown
         box = uiDropDown(layout, properties, "panelExpanded_draw", properties.panelExpanded_draw, "Draw")
+        if properties.panelExpanded_draw:
+            row = box.row()
+            row.operator('view3d.view_camera')
+            row = box.row()
+            row.operator('pipecleaner.setmaterial_x')
+            row.operator('pipecleaner.setmaterial_y')
+            row.operator('pipecleaner.setmaterial_z')
+            row = box.row()
+            row.operator('pipecleaner.setmaterial_arbitrary')
+            row.operator('pipecleaner.setmaterial_intersection')
+            row.operator('pipecleaner.setmaterial_rough')
+
+        # SETUP dropdown
+        box = uiDropDown(layout, properties, "panelExpanded_edit", properties.panelExpanded_edit, "Edit")
 
 
-        # Solve dropdown
+        # SOLVE dropdown
         box = uiDropDown(layout, properties, "panelExpanded_solve", properties.panelExpanded_solve, "Solve")
         if properties.panelExpanded_solve:
-            # experiments
-            # layout.prop_with_menu([1,2,3], 'hello', text="", text_ctxt="", translate=True, icon='NONE', icon_only=False, menu)
-            # scene = context.scene
-            # layout.prop(scene, "mychosenObject")
-            # layout.prop_search()
-
-            # Camera
-            # row = layout.row()
-            # row.operator_menu_enum("object.select_object", "select_objects", text="Select camera")
-            # layout.operator_menu_enum("object.select_by_type", "type", text="Select All by Type...")
-            # layout.separator()
-            # layout.operator("object.select_all", text="Select/Deselect All").action = 'TOGGLE'
-            # layout.operator("object.select_all", text="Inverse").action = 'INVERT'
-            # layout.operator("object.select_random", text="Random")
-            # row = layout.row()
-            # row.operator_menu_enum("object.select_object", "select_objects", text = "Select object")
-            # layout.separator()
-
-            # expand each operator option into this menu
-            # layout.operator_enum("object.light_add", "type")
-
 
             if gpFound is False or materialsFound is False or materialsAreAssigned is False:
                 return  # we can't continue until it's setup properly
@@ -170,10 +252,9 @@ class PipecleanerProperties(bpy.types.PropertyGroup):
     camera: bpy.props.StringProperty() = ""
     intersectionMarkerAreaThreshold: bpy.props.FloatProperty() = 1.0
     panelExpanded_setup: bpy.props.BoolProperty() = True
-    panelExpanded_draw: bpy.props.BoolProperty() = True
-    panelExpanded_solve: bpy.props.BoolProperty() = True
-    # my_prop_2 = bpy.props.IntProperty()
-    # my_prop_3 = bpy.props.IntProperty()
+    panelExpanded_draw: bpy.props.BoolProperty() = False
+    panelExpanded_edit: bpy.props.BoolProperty() = False
+    panelExpanded_solve: bpy.props.BoolProperty() = False
 
 
 def register():
