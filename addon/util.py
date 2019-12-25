@@ -1,7 +1,7 @@
 
 import bpy
 import math
-from mathutils import Vector, geometry
+from mathutils import Vector, geometry, Euler
 from enum import Enum
 import sys
 # OPERATORS ---------------
@@ -849,12 +849,36 @@ def uiDropDown(layout, propertyLocation, propertyString, property, name):
     return box
 
 
+def drawFromSpecifiedCamera():
+    bpy.context.space_data.use_local_camera = True
+    #camObj = bpy.data.cameras[bpy.context.scene.pipecleaner_properties.camera]
+    for o in bpy.data.objects:
+        if bpy.context.scene.pipecleaner_properties.camera in o.data:
+            bpy.context.space_data.camera = o
+            break
+    bpy.ops.view3d.view_camera()
+    bpy.ops.object.mode_set(mode="PAINT_GPENCIL")
+    #bpy.ops.object.set_object_mode_pie(mode="PAINT_GPENCIL")
+    return
+
+
+def createAndSpecifyCamera():
+    """create a new camera, add it to the scene, set it as the specified camera"""
+    newCam = bpy.data.cameras.new(name='Pipecleaner_CameraShape')
+    newCamObject = bpy.data.objects.new('Pipecleaner_Camera', newCam)
+    newCamObject.location = Vector((10.0, -10.0, 5.0))
+    newCamObject.rotation_euler = Euler((1.3089969158172607, 0.0, 0.7853981852531433), 'XYZ')
+    bpy.context.scene.collection.objects.link(newCamObject)
+    bpy.context.scene.pipecleaner_properties.camera = newCam.name
+    return
+
+
 def solveContours():
     """ok, so I guess this is gonna be the big guy"""
     print('-' * 100 + '\nsolving contours....')
 
     # get the camera info
-    camera = Camera(bpy.context.scene.camera)
+    camera = camera(bpy.data.objects[bpy.context.scene.pipecleaner_properties.camera])  # Camera(bpy.context.scene.camera)
 
     # build a list of what intersections affect what strokes:
     planarStrokes, intersectionMarkers = getStrokeData(camera)    # - build a dict of intersections and a dict of strokes

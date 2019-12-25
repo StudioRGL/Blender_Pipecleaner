@@ -68,7 +68,7 @@ class Pipecleaner_SolveContoursOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class PipeCleaner_SetMaterialX(bpy.types.Operator):
+class Pipecleaner_SetMaterialX(bpy.types.Operator):
     """Sets the active material to X, if it exists and we're in stroke mode"""
     bl_idname = "pipecleaner.setmaterial_x"
     bl_label = 'X'
@@ -82,7 +82,7 @@ class PipeCleaner_SetMaterialX(bpy.types.Operator):
         return readyToSetActiveMaterial(materialNames().x)
 
 
-class PipeCleaner_SetMaterialY(bpy.types.Operator):
+class Pipecleaner_SetMaterialY(bpy.types.Operator):
     """Sets the active material to Y, if it exists and we're in stroke mode"""
     bl_idname = "pipecleaner.setmaterial_y"
     bl_label = 'Y'
@@ -96,7 +96,7 @@ class PipeCleaner_SetMaterialY(bpy.types.Operator):
         return readyToSetActiveMaterial(materialNames().y)
 
 
-class PipeCleaner_SetMaterialZ(bpy.types.Operator):
+class Pipecleaner_SetMaterialZ(bpy.types.Operator):
     """Sets the active material to Z, if it exists and we're in stroke mode"""
     bl_idname = "pipecleaner.setmaterial_z"
     bl_label = 'Z'
@@ -110,7 +110,7 @@ class PipeCleaner_SetMaterialZ(bpy.types.Operator):
         return readyToSetActiveMaterial(materialNames().z)
 
 
-class PipeCleaner_SetMaterialArbitrary(bpy.types.Operator):
+class Pipecleaner_SetMaterialArbitrary(bpy.types.Operator):
     """Sets the active material to Arbitrary, if it exists and we're in stroke mode"""
     bl_idname = "pipecleaner.setmaterial_arbitrary"
     bl_label = 'Arbitrary'
@@ -124,7 +124,7 @@ class PipeCleaner_SetMaterialArbitrary(bpy.types.Operator):
         return readyToSetActiveMaterial(materialNames().arbitrary)
 
 
-class PipeCleaner_SetMaterialIntersection(bpy.types.Operator):
+class Pipecleaner_SetMaterialIntersection(bpy.types.Operator):
     """Sets the active material to Intersection, if it exists and we're in stroke mode"""
     bl_idname = "pipecleaner.setmaterial_intersection"
     bl_label = 'Intersection'
@@ -138,7 +138,7 @@ class PipeCleaner_SetMaterialIntersection(bpy.types.Operator):
         return readyToSetActiveMaterial(materialNames().intersection)
 
 
-class PipeCleaner_SetMaterialRough(bpy.types.Operator):
+class Pipecleaner_SetMaterialRough(bpy.types.Operator):
     """Sets the active material to Rough, if it exists and we're in stroke mode"""
     bl_idname = "pipecleaner.setmaterial_rough"
     bl_label = 'Rough'
@@ -150,6 +150,32 @@ class PipeCleaner_SetMaterialRough(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         return readyToSetActiveMaterial(materialNames().rough)
+
+
+class Pipecleaner_DrawFromSpecifiedCamera(bpy.types.Operator):
+    """Sets the active material to Rough, if it exists and we're in stroke mode"""
+    bl_idname = "pipecleaner.drawfromspecifiedcamera"
+    bl_label = 'Draw from Camera'
+
+    def execute(self, context):
+        drawFromSpecifiedCamera()
+        return{'FINISHED'}
+
+    @classmethod
+    def poll(cls, context):
+        c = cameraChosen()
+        gp = getActiveGreasePencilObject()
+        return c is True and gp is not None
+
+
+class Pipecleaner_createAndSpecifyCamera(bpy.types.Operator):
+    """creates a new camera in a default location, and sets it as the 'specified' camera"""
+    bl_idname = "pipecleaner.createandspecifycamera"
+    bl_label = 'Create Camera'
+
+    def execute(self, context):
+        createAndSpecifyCamera()
+        return{'FINISHED'}
 
 
 # Based on blender's ui_panel_simple.py template
@@ -192,11 +218,10 @@ class PipecleanerPanel(bpy.types.Panel):
             box.prop_search(properties, "camera", bpy.data, "cameras", icon='CAMERA_DATA')  # select camera!
 
             row = box.row()
-            # row.enabled = gpFound is False
-            row.operator('object.gpencil_add', icon='OUTLINER_OB_GREASEPENCIL')
+            row.operator('pipecleaner.createandspecifycamera', icon='OUTLINER_OB_CAMERA')
 
             row = box.row()
-            row.operator('object.camera_add', icon='OUTLINER_OB_CAMERA')
+            row.operator('object.gpencil_add', icon='OUTLINER_OB_GREASEPENCIL')
 
             row = box.row()
             row.operator('pipecleaner.creatematerials', icon='NODE_MATERIAL')
@@ -208,7 +233,7 @@ class PipecleanerPanel(bpy.types.Panel):
         box = uiDropDown(layout, properties, "panelExpanded_draw", properties.panelExpanded_draw, "Draw")
         if properties.panelExpanded_draw:
             row = box.row()
-            row.operator('view3d.view_camera')
+            row.operator('pipecleaner.drawfromspecifiedcamera')
             row = box.row()
             row.operator('pipecleaner.setmaterial_x')
             row.operator('pipecleaner.setmaterial_y')
