@@ -30,6 +30,10 @@ class Pipecleaner_AssignMaterialsOperator(bpy.types.Operator):
     bl_idname = "pipecleaner.assignmaterials"
     bl_label = "Assign Materials to Stroke"
 
+    @classmethod
+    def poll(cls, context):
+        return (materialsAssigned() is False) and (getActiveGreasePencilObject() is not None)
+
     def execute(self, context):
         # createMaterials()
         assignMaterials()
@@ -92,75 +96,73 @@ class PipecleanerPanel(bpy.types.Panel):
         uiChecklist(layout, "Materials created", materialsFound)
         uiChecklist(layout, "Materials assigned", materialsAreAssigned)
         uiChecklist(layout, "Camera specified", cameraIsChosen)
+        uiChecklist(layout, "Ready!", gpFound and materialsFound and materialsAreAssigned and cameraIsChosen)
 
-
-        box = layout.box()
-        row = box.row()
-        obj = context.object
-        row.prop(properties, "panelExpanded_setup",
-                 icon="TRIA_DOWN" if properties.panelExpanded_setup else "TRIA_RIGHT",
-                 icon_only=True, emboss=False
-                 )
-        row.label(text="Setup")
+        # Setup dropdown
+        box = uiDropDown(layout, properties, "panelExpanded_setup", properties.panelExpanded_setup, "Setup")
 
         if properties.panelExpanded_setup:
             # get the camera
             box.prop_search(properties, "camera", bpy.data, "cameras", icon = 'CAMERA_DATA')  # select camera!
 
-            # create buttons if we need 'em
-            if gpFound is False:
-                row = box.row()
-                row.enabled = False
-                row.operator('object.gpencil_add', icon='OUTLINER_OB_GREASEPENCIL')
+            row = box.row()
+            row.enabled = gpFound is False
+            row.operator('object.gpencil_add', icon='OUTLINER_OB_GREASEPENCIL')
 
-            if materialsFound is False:
-                row = box.row()
-                row.operator('pipecleaner.creatematerials', icon='NODE_MATERIAL')
-
-            if materialsAreAssigned is False:
-                row = box.row()
-                row.operator('pipecleaner.assignmaterials', icon='MATERIAL')
-
-        # experiments
-        # layout.prop_with_menu([1,2,3], 'hello', text="", text_ctxt="", translate=True, icon='NONE', icon_only=False, menu)
-        # scene = context.scene
-        # layout.prop(scene, "mychosenObject")
-        # layout.prop_search()
-
-        # Camera
-        # row = layout.row()
-        # row.operator_menu_enum("object.select_object", "select_objects", text="Select camera")
-        # layout.operator_menu_enum("object.select_by_type", "type", text="Select All by Type...")
-        # layout.separator()
-        # layout.operator("object.select_all", text="Select/Deselect All").action = 'TOGGLE'
-        # layout.operator("object.select_all", text="Inverse").action = 'INVERT'
-        # layout.operator("object.select_random", text="Random")
-        # row = layout.row()
-        # row.operator_menu_enum("object.select_object", "select_objects", text = "Select object")
-        # layout.separator()
-
-        # expand each operator option into this menu
-        # layout.operator_enum("object.light_add", "type")
+            # if materialsFound is False:
+            row = box.row()
+            row.operator('pipecleaner.creatematerials', icon='NODE_MATERIAL')
 
 
+            row = box.row()
+            row.operator('pipecleaner.assignmaterials', icon='MATERIAL')
 
-        if gpFound is False or materialsFound is False or materialsAreAssigned is False:
-            return  # we can't continue until it's setup properly
+        # Solve dropdown
+        box = uiDropDown(layout, properties, "panelExpanded_draw", properties.panelExpanded_draw, "Draw")
 
-        # set intersection markers
-        row = layout.row()
-        row.operator("pipecleaner.detectintersectionmarkers", icon='SNAP_MIDPOINT')
 
-        # solve contours
-        row = layout.row()
-        row.operator("pipecleaner.solvecontours", icon="SPHERE")
+        # Solve dropdown
+        box = uiDropDown(layout, properties, "panelExpanded_solve", properties.panelExpanded_solve, "Solve")
+        if properties.panelExpanded_solve:
+            # experiments
+            # layout.prop_with_menu([1,2,3], 'hello', text="", text_ctxt="", translate=True, icon='NONE', icon_only=False, menu)
+            # scene = context.scene
+            # layout.prop(scene, "mychosenObject")
+            # layout.prop_search()
 
-        # row = layout.row()
-        # row.label(text="Pipecleaner Tools", icon='WORLD_DATA')
-        # row = layout.row()
-        # row.label(text="Active object is: " + obj.name)
-        # row = layout.row()
-        # row.prop(obj, "name")
+            # Camera
+            # row = layout.row()
+            # row.operator_menu_enum("object.select_object", "select_objects", text="Select camera")
+            # layout.operator_menu_enum("object.select_by_type", "type", text="Select All by Type...")
+            # layout.separator()
+            # layout.operator("object.select_all", text="Select/Deselect All").action = 'TOGGLE'
+            # layout.operator("object.select_all", text="Inverse").action = 'INVERT'
+            # layout.operator("object.select_random", text="Random")
+            # row = layout.row()
+            # row.operator_menu_enum("object.select_object", "select_objects", text = "Select object")
+            # layout.separator()
+
+            # expand each operator option into this menu
+            # layout.operator_enum("object.light_add", "type")
+
+
+            if gpFound is False or materialsFound is False or materialsAreAssigned is False:
+                return  # we can't continue until it's setup properly
+
+            # set intersection markers
+            row = box.row()
+            row.operator("pipecleaner.detectintersectionmarkers", icon='SNAP_MIDPOINT')
+
+            # solve contours
+            row = box.row()
+            row.operator("pipecleaner.solvecontours", icon="SPHERE")
+
+            # row = layout.row()
+            # row.label(text="Pipecleaner Tools", icon='WORLD_DATA')
+            # row = layout.row()
+            # row.label(text="Active object is: " + obj.name)
+            # row = layout.row()
+            # row.prop(obj, "name")
 
 
 class PipecleanerProperties(bpy.types.PropertyGroup):

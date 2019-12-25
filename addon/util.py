@@ -778,9 +778,11 @@ def objectHasMaterialsAssigned():
     """check if the active object has all the required materials assigned"""
     # TODO: write, connect
 
+
 def cameraChosen():
     c = bpy.context.scene.pipecleaner_properties.camera
     return c is not ""
+
 
 def uiChecklist(layout, text, check):
     """simple checklist generator"""
@@ -790,6 +792,26 @@ def uiChecklist(layout, text, check):
     else:
         icon = "CHECKBOX_DEHLT"
     row.label(text=text, icon=icon)
+
+
+def uiDropDown(layout, propertyLocation, propertyString, property, name):
+    """a dropdown section, returns a ui box within itself.
+    layout: a UILayout object
+    propertyLocation: data from which to take property
+    propertyString: identifier of property in data
+    property: the bool value of the property (if it's expanded or not)
+    name: just a label string
+    """
+    box = layout.box()
+    row = box.row()
+
+    # make this a function so we can reuse, returns box and expanded I guess?
+    row.prop(propertyLocation, propertyString,
+             icon="TRIA_DOWN" if property else "TRIA_RIGHT",
+             icon_only=True, emboss=False
+             )
+    row.label(text=name)
+    return box
 
 
 def solveContours():
