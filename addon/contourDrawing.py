@@ -15,6 +15,10 @@ class Pipecleaner_CreateMaterialsOperator(bpy.types.Operator):
     bl_idname = "pipecleaner.creatematerials"
     bl_label = "Create Materials"
 
+    @classmethod
+    def poll(cls, context):
+        return materialsExist()==False
+
     def execute(self, context):
         createMaterials()
         return {'FINISHED'}
@@ -38,9 +42,10 @@ class Pipecleaner_DetectIntersectionMarkersOperator(bpy.types.Operator):
     bl_label = "Detect Intersection Markers"
     bl_options = {"REGISTER", "UNDO"}
     param_threshold: bpy.props.FloatProperty(name="Threshold") = 1.0
+    # param_camera: bpy.props.PointerProperty(name="MaybeCamera")
 
     def execute(self, context):
-        convertSmallStrokesToMarkers(param_threshold)
+        convertSmallStrokesToMarkers(self.param_threshold)
         return {'FINISHED'}
 
     # def invoke(self, context, event):
@@ -63,7 +68,7 @@ class Pipecleaner_SolveContoursOperator(bpy.types.Operator):
 class PipecleanerPanel(bpy.types.Panel):
     """Creates a Panel in the Object properties window"""
     bl_label = "Pipecleaner Tools"
-    bl_idname = "Pipecleaner_ToolPanel"
+    bl_idname = "PIPECLEANER_PT_tool_panel"
     bl_space_type = 'VIEW_3D'  # 'PROPERTIES'
     bl_region_type = 'UI'  # 'WINDOW' #  ('WINDOW', 'HEADER', 'CHANNELS', 'TEMPORARY', 'UI', 'TOOLS', 'TOOL_PROPS', 'PREVIEW', 'HUD', 'NAVIGATION_BAR', 'EXECUTE', 'FOOTER', 'TOOL_HEADER')
     bl_category = 'Edit'  # 'Pipecleaner Tools'
@@ -71,34 +76,73 @@ class PipecleanerPanel(bpy.types.Panel):
 
     def draw(self, context):
         # let's check if we have what we need
-        gpFound = (bpy.context.active_object is not None) and (bpy.context.active_object.type == 'GPENCIL')
+        gpFound = getActiveGreasePencilObject() is not None
         materialsFound = materialsExist()  # TODO: name functions/variables more consistently
         materialsAreAssigned = materialsAssigned()
+        cameraIsChosen = cameraChosen()
 
         # draw stuff
+        scene = context.scene
+        properties = scene.pipecleaner_properties
+
         layout = self.layout
 
         # checklist of things
         uiChecklist(layout, "Grease Pencil stroke active", gpFound)
         uiChecklist(layout, "Materials created", materialsFound)
         uiChecklist(layout, "Materials assigned", materialsAreAssigned)
+        uiChecklist(layout, "Camera specified", cameraIsChosen)
 
-        # create buttons if we need 'em
-        if gpFound is False:
-            row = layout.row()
-            row.operator('object.gpencil_add', icon='OUTLINER_OB_GREASEPENCIL')
 
-        if materialsFound is False:
-            row = layout.row()
-            row.operator('pipecleaner.creatematerials', icon='NODE_MATERIAL')
+        box = layout.box()
+        row = box.row()
+        obj = context.object
+        row.prop(properties, "panelExpanded_setup",
+                 icon="TRIA_DOWN" if properties.panelExpanded_setup else "TRIA_RIGHT",
+                 icon_only=True, emboss=False
+                 )
+        row.label(text="Setup")
 
-        if materialsAreAssigned is False:
-            row = layout.row()
-            row.operator('pipecleaner.assignmaterials', icon='MATERIAL')
+        if properties.panelExpanded_setup:
+            # get the camera
+            box.prop_search(properties, "camera", bpy.data, "cameras", icon = 'CAMERA_DATA')  # select camera!
+
+            # create buttons if we need 'em
+            if gpFound is False:
+                row = box.row()
+                row.enabled = False
+                row.operator('object.gpencil_add', icon='OUTLINER_OB_GREASEPENCIL')
+
+            if materialsFound is False:
+                row = box.row()
+                row.operator('pipecleaner.creatematerials', icon='NODE_MATERIAL')
+
+            if materialsAreAssigned is False:
+                row = box.row()
+                row.operator('pipecleaner.assignmaterials', icon='MATERIAL')
+
+        # experiments
+        # layout.prop_with_menu([1,2,3], 'hello', text="", text_ctxt="", translate=True, icon='NONE', icon_only=False, menu)
+        # scene = context.scene
+        # layout.prop(scene, "mychosenObject")
+        # layout.prop_search()
 
         # Camera
-        row = layout.row()
-        row.operator_menu_enum("object.select_object", "select_objects", text="Select camera")
+        # row = layout.row()
+        # row.operator_menu_enum("object.select_object", "select_objects", text="Select camera")
+        # layout.operator_menu_enum("object.select_by_type", "type", text="Select All by Type...")
+        # layout.separator()
+        # layout.operator("object.select_all", text="Select/Deselect All").action = 'TOGGLE'
+        # layout.operator("object.select_all", text="Inverse").action = 'INVERT'
+        # layout.operator("object.select_random", text="Random")
+        # row = layout.row()
+        # row.operator_menu_enum("object.select_object", "select_objects", text = "Select object")
+        # layout.separator()
+
+        # expand each operator option into this menu
+        # layout.operator_enum("object.light_add", "type")
+
+
 
         if gpFound is False or materialsFound is False or materialsAreAssigned is False:
             return  # we can't continue until it's setup properly
@@ -119,27 +163,23 @@ class PipecleanerPanel(bpy.types.Panel):
         # row.prop(obj, "name")
 
 
-# def register():
-#     print('Registering Pipecleaner UI Panel & Operators')
-#     # bpy.utils.register_class(PipecleanerPanel)
-#     for c in [PipecleanerPanel, Pipecleaner_CreateMaterialsOperator, Pipecleaner_AssignMaterialsOperator, Pipecleaner_DetectIntersectionMarkersOperator, Pipecleaner_SolveContoursOperator]:
-#         bpy.utils.register_class(c)
-#     print('Done.')
-#
-#
-# def unregister():
-#     # HACK: make sure you've added all the operators to both REGISTER and UNREGISTER
-#     for c in [PipecleanerPanel, Pipecleaner_CreateMaterialsOperator, Pipecleaner_AssignMaterialsOperator, Pipecleaner_DetectIntersectionMarkersOperator, Pipecleaner_SolveContoursOperator]:
-#         bpy.utils.unregister_class(c)
-#
-#
-# if __name__ == "__main__":
-#     register()
-#
-#
-# register()
-# flattenAll()
-# solveContours()
+class PipecleanerProperties(bpy.types.PropertyGroup):
+    """Scene properties that are used for the addon"""
+    camera: bpy.props.StringProperty() = ""
+    intersectionMarkerAreaThreshold: bpy.props.FloatProperty() = 1.0
+    panelExpanded_setup: bpy.props.BoolProperty() = True
+    panelExpanded_draw: bpy.props.BoolProperty() = True
+    panelExpanded_solve: bpy.props.BoolProperty() = True
+    # my_prop_2 = bpy.props.IntProperty()
+    # my_prop_3 = bpy.props.IntProperty()
+
+
+def register():
+    """extra registration stuff not included in auto load..."""
+    # bpy.types.Scene.my_addon = bpy.props.PointerProperty(type=PipecleanerProperties)
+    # print ('registered extra properties')
+    bpy.types.Scene.pipecleaner_properties = bpy.props.PointerProperty(type=PipecleanerProperties)
+    pass
 
 
 print('Finished running code.')

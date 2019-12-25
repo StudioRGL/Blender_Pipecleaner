@@ -778,6 +778,9 @@ def objectHasMaterialsAssigned():
     """check if the active object has all the required materials assigned"""
     # TODO: write, connect
 
+def cameraChosen():
+    c = bpy.context.scene.pipecleaner_properties.camera
+    return c is not ""
 
 def uiChecklist(layout, text, check):
     """simple checklist generator"""

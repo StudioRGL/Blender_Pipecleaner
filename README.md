@@ -8,22 +8,23 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 - [x] implement cluster-based population
 - [x] add arbitrary planes support
 - [ ] make sure it works with colinear points (or rather, fails gracefully)
-- [ ] rename functions for consistency
+- [ ] rename functions for consistency (get, set, etc)
 - [ ] make proper averaging for arbitrary planes?
 - [ ] deal with locked/hidden layers? what should it do? maybe ignore locked layers, but not hidden layers?
 - [ ] doesn't always seem to reliably deal with intersections?
 - [ ] deal correctly with cyclic strokes?
-- [ ] add materials generation
-- [ ] add operator for 'generate materials'
+- [x] add materials generation
+- [x] add operator for 'generate materials'
 - [ ] add operator for 'set strokes below threshold to intersectionMarkers'
 - [ ] add operator for 'generate'
 - [ ] maybe add operator for split/join strokes
 - [ ] add menu/ui
-- [ ] add addon stuff
+- [x] add addon stuff
 - [x] position intersection markers in 3D space?
 - [ ] finish readme.md!
 - [ ] clarify hasBeenPlaced vs hasBeenDefined
 - [ ] make it work with camera at origin
+- [ ] better names for materialsExist etc
 
 ## Usage
 
