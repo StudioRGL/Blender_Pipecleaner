@@ -16,9 +16,9 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 - [x] add materials generation
 - [x] add operator for 'generate materials'
 - [ ] add operator for 'set strokes below threshold to intersectionMarkers'
-- [ ] add operator for 'generate'
-- [ ] add operator for 'draw from camera'
-- [ ] add operator for each material
+- [x] add operator for 'solve'
+- [x] add operator for 'draw from camera'
+- [x] add operator for each material
 - [ ] maybe add operator for split/join strokes
 - [ ] add menu/ui
 - [x] add addon stuff
@@ -27,10 +27,12 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 - [ ] clarify hasBeenPlaced vs hasBeenDefined
 - [ ] make it work with camera at origin
 - [ ] better names for materialsExist etc
-- [ ] make 'add camera' before GP and fill in box
+- [x] make 'add camera' before GP and fill in box
 - [ ] make sure 'solve contours' uses the correct camera
 - [ ] add generic function to get camera OBJECT from camera SHAPE NAME
 - [ ] separate UI helper functions from solver helper functions
+- [ ] make 'draw from camera' not a toggle
+- [ ] add helpful descriptions to operators
 
 ## Usage
 
