@@ -33,6 +33,7 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 - [ ] separate UI helper functions from solver helper functions
 - [ ] make 'draw from camera' not a toggle
 - [ ] add helpful descriptions to operators
+- [ ] write objectHasMaterialAssigned
 
 ## Usage
 
