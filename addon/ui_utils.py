@@ -51,12 +51,15 @@ def cameraChosen():
 
 def readyToSetActiveMaterial(materialEnum):
     """Helper function called by the Poll function of an operator"""
-    if (materialsAssigned()) and (bpy.context.mode in ['PAINT_GPENCIL', 'EDIT_GPENCIL']):
-        gp = getActiveGreasePencilObject()  # don't need to check that cos materials assigned should already
-        if gp.active_material.name == materialEnum:
-            return False  # can't set it if it's already set
-        else:
-            return True
+    if materialsAssigned():
+        if bpy.context.mode == 'PAINT_GPENCIL':
+            gp = getActiveGreasePencilObject()  # don't need to check that cos materials assigned implies we have a gp
+            if gp.active_material.name == materialEnum:
+                return False  # can't set it if it's already set
+            else:
+                return True
+        elif bpy.context.mode == 'EDIT_GPENCIL':
+            return True  # as long as the material's assigned, we good
     else:
         return False
 
@@ -155,24 +158,29 @@ def setActiveMaterial(materialEnum):
 
     # if we're in edit mode, also change the selected stroke(s) to this material
     if bpy.context.mode == 'EDIT_GPENCIL':
-        # get all the selected strokes
-        # check which ones are selected
-        # if they're selected, set their materials
-        pass
+        # get all the active strokes
+        strokes = getActiveGreasePencilStrokes()
+        for stroke in strokes:
+            selected = False
+            if stroke.select:  # if it's selected
+                selected = True
+            else:
+                for point in stroke.points:
+                    if point.select:
+                        selected = True
+                        break
+            if selected:
+                stroke.material_index = materialIndex  # set the material index
 
 
 def createMaterials():
     """if the materials don't exist, create 'em"""
-    # mesh = bpy.data.meshes.new(name="New Object Mesh")
-    # mesh.from_pydata(verts, edges, faces)
-    # object_data_add(context, mesh, operator=self)
     createMaterial(materialNames().x, [1, 0, 0, 1])
     createMaterial(materialNames().y, [0, 1, 0, 1])
     createMaterial(materialNames().z, [0, 0, 1, 1])
     createMaterial(materialNames().arbitrary, [1, 0, 1, 1])
     createMaterial(materialNames().intersection, [0, 1, 1, 1])
     createMaterial(materialNames().rough, [0, 0, 0, 0.5])
-    # TODO: write, connect
 
 
 def assignMaterials():

@@ -100,7 +100,7 @@ class Camera():
         # self.elevation = math.degrees(rotation_euler[2])
         self.direction = cam.matrix_world.to_quaternion() @ Vector((0.0, 0.0, -1.0))  # it's a vector now
         # https://blender.stackexchange.com/questions/13738/how-to-calculate-the-direction-and-up-vector-of-a-camera
-        print('got camera, position', self.origin, ', heading', self.heading, ', elevation', self.elevation)
+        print('got camera, position', self.origin, ' direction: ', self.direction)
 
 
 # -------------------------------------------------------------------------------------------------------
@@ -637,7 +637,8 @@ def getActiveGreasePencilStrokes():
     gp = getActiveGreasePencilObject()
     if gp is None:
         return strokes  # which will have length = 0
-        # layer = gp.data.layers.active # nah let's do all layers
+
+    # layer = gp.data.layers.active # nah let's do all layers
     for layer in gp.data.layers:
         frames = layer.frames.values()
         currentFrameFound = False
@@ -660,72 +661,65 @@ def getStrokeData(camera):
 
     gp = getActiveGreasePencilObject()
     if gp is None:
-        raise(Exception("NO ACTIVE GPENCIL OBJECT"))
+        raise(Exception('No active grease pencil object'))
 
-    # layer = gp.data.layers.active # nah let's do all layers
-    for layer in gp.data.layers:
+    strokes = getActiveGreasePencilStrokes()
 
-        # get all the frames, find the current one
-        frames = layer.frames.values()
-        currentFrameFound = False
-        for frame in frames:
-            if frame.frame_number == bpy.context.scene.frame_current:  # only current frame
-                currentFrameFound = True
-                strokes = frame.strokes.values()
-                for stroke in strokes:
-                    # nPoints =  len(stroke.points.values())
-                    # print ('checking curve with ', nPoints, ' points')
-                    # check the material
-                    itsAMarker = False
-                    # check material
-                    materialIndex = stroke.material_index
-                    # or nPoints < INTERSECTION_MARKER_THRESHOLD: # TODO: set up separate marker detection based on bbox
-                    if materialIndex == gp.data.materials.keys().index(materialNames().intersection):
-                        # it's an intersection marker
-                        # set the material (maybe redundant)
-                        itsAMarker = True
-                    else:
-                        # make a temp stroke to check area
-                        tempStroke = Stroke(stroke, camera)
-                        bBoxArea = tempStroke.bBoxArea()
-                        if bBoxArea < INTERSECTION_MARKER_THRESHOLD:
-                            itsAMarker = True
-                            # set the mat, cos it wasn't set
-                            stroke.material_index = gp.data.materials.keys().index(materialNames().intersection)
-                            # by material name
+    if len(strokes) == 0:
+        raise(Exception("No strokes found!"))
 
-                    if itsAMarker:
-                        # create an intersectionLine from it
-                        newIntersectionMarker = IntersectionMarker(stroke, camera)
-                        intersectionMarkers.append(newIntersectionMarker)
-                    else:
-                        # it's some kind of planar stroke
-                        # get the material index
+    for stroke in strokes:
+        # nPoints =  len(stroke.points.values())
+        # print ('checking curve with ', nPoints, ' points')
+        # check the material
+        itsAMarker = False
+        # check material
+        materialIndex = stroke.material_index
+        # or nPoints < INTERSECTION_MARKER_THRESHOLD: # TODO: set up separate marker detection based on bbox
+        if materialIndex == gp.data.materials.keys().index(materialNames().intersection):
+            # it's an intersection marker
+            # set the material (maybe redundant)
+            itsAMarker = True
+        else:
+            # make a temp stroke to check area
+            tempStroke = Stroke(stroke, camera)
+            bBoxArea = tempStroke.bBoxArea()
+            if bBoxArea < INTERSECTION_MARKER_THRESHOLD:
+                itsAMarker = True
+                # set the mat, cos it wasn't set
+                stroke.material_index = gp.data.materials.keys().index(materialNames().intersection)
+                # by material name
 
-                        normal = None
-                        strokeType = StrokeType.planar_axial
-                        if materialIndex == gp.data.materials.keys().index(materialNames().x):
-                            normal = Vector((1, 0, 0))
-                        elif materialIndex == gp.data.materials.keys().index(materialNames().y):
-                            normal = Vector((0, 1, 0))
-                        elif materialIndex == gp.data.materials.keys().index(materialNames().z):
-                            normal = Vector((0, 0, 1))
-                        elif materialIndex == gp.data.materials.keys().index(materialNames().arbitrary):
-                            # arbitrary plane!
-                            normal = None
-                            strokeType = StrokeType.planar_arbitrary
-                        else:
-                            print("Stroke has unknown material (", materialIndex, "), ignoring!")
-                            continue
+        if itsAMarker:
+            # create an intersectionLine from it
+            newIntersectionMarker = IntersectionMarker(stroke, camera)
+            intersectionMarkers.append(newIntersectionMarker)
+        else:
+            # it's some kind of planar stroke
+            # get the material index
 
-                        newPlanarStroke = PlanarStroke(stroke, camera)
-                        newPlanarStroke.normal = normal
-                        newPlanarStroke.strokeType = strokeType
-                        planarStrokes.append(newPlanarStroke)
-                        # check it against the custom materials
-                break
-        if currentFrameFound is False:
-            raise(Exception("couldn't find any gpencil data for current frame, doing nothing!"))
+            normal = None
+            strokeType = StrokeType.planar_axial
+            if materialIndex == gp.data.materials.keys().index(materialNames().x):
+                normal = Vector((1, 0, 0))
+            elif materialIndex == gp.data.materials.keys().index(materialNames().y):
+                normal = Vector((0, 1, 0))
+            elif materialIndex == gp.data.materials.keys().index(materialNames().z):
+                normal = Vector((0, 0, 1))
+            elif materialIndex == gp.data.materials.keys().index(materialNames().arbitrary):
+                # arbitrary plane!
+                normal = None
+                strokeType = StrokeType.planar_arbitrary
+            else:
+                print("Stroke has unknown material (", materialIndex, "), ignoring!")
+                continue
+
+            newPlanarStroke = PlanarStroke(stroke, camera)
+            newPlanarStroke.normal = normal
+            newPlanarStroke.strokeType = strokeType
+            planarStrokes.append(newPlanarStroke)
+            # check it against the custom materials
+
     return (planarStrokes, intersectionMarkers)
 
 
