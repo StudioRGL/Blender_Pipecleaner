@@ -520,9 +520,8 @@ class PlanarStroke(Stroke):
                     else:
                         # ok, this is the screenspace coordinate, we can get where it is reasonably easily
                         # where the angular line intersects with the replaneStroke's plane
-                        cartesianCoordinate =
-                        intersectingStroke.polarToCartesianPositionOfIntesection([intersectionWithThisStroke[0],
-                                                                                 intersectionWithThisStroke[1]])
+                        il = [intersectionWithThisStroke[0], intersectionWithThisStroke[1]]
+                        cartesianCoordinate = intersectingStroke.polarToCartesianPositionOfIntesection(il)
                         if cartesianCoordinate is None:
                             raise(Exception("Intersection point = None on stroke: ", self))
                         anchorPoints.append(cartesianCoordinate)
@@ -626,6 +625,30 @@ def getActiveGreasePencilObject():
     if gp.type != 'GPENCIL':
         return None  # raise(Exception("NO ACTIVE GPENCIL OBJECT"))
     return gp
+
+
+def getActiveGreasePencilStrokes():
+    """Gets all the strokes for all the layers for the current frame (optional)
+    of the active grease pencil"""
+    # TODO: add options for ignoring locked/hidden layers and doing all frames/current frame
+    # TODO: wait does it even make sense to do all frames? we would need to do each frame individually,
+    # but how would strokes that last multiple frames work? ok, let's just do the current frame :-)
+    strokes = []
+    gp = getActiveGreasePencilObject()
+    if gp is None:
+        return strokes  # which will have length = 0
+        # layer = gp.data.layers.active # nah let's do all layers
+    for layer in gp.data.layers:
+        frames = layer.frames.values()
+        currentFrameFound = False
+        for frame in frames:
+            if frame.frame_number == bpy.context.scene.frame_current:  # only current frame
+                currentFrameFound = True
+                strokes += frame.strokes.values()  # add them on to the strokes
+        if currentFrameFound is False:
+            raise(Exception("couldn't find any gpencil data for current frame, doing nothing!"))
+            # TODO: maybe shouldn't be an exception here!
+    return strokes
 
 
 def getStrokeData(camera):

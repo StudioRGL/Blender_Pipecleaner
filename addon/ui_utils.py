@@ -51,7 +51,7 @@ def cameraChosen():
 
 def readyToSetActiveMaterial(materialEnum):
     """Helper function called by the Poll function of an operator"""
-    if (materialsAssigned()) and (bpy.context.mode == 'PAINT_GPENCIL'):
+    if (materialsAssigned()) and (bpy.context.mode in ['PAINT_GPENCIL', 'EDIT_GPENCIL']):
         gp = getActiveGreasePencilObject()  # don't need to check that cos materials assigned should already
         if gp.active_material.name == materialEnum:
             return False  # can't set it if it's already set
@@ -144,8 +144,6 @@ def drawFromSpecifiedCamera():
 
 def setActiveMaterial(materialEnum):
     """set the active material"""
-    # TODO: finish and connect
-    # materialIndex =
     gp = getActiveGreasePencilObject()
     materialsAreAssigned = materialsAssigned()
 
@@ -154,6 +152,13 @@ def setActiveMaterial(materialEnum):
 
     materialIndex = gp.material_slots.keys().index(materialEnum)
     bpy.context.object.active_material_index = materialIndex
+
+    # if we're in edit mode, also change the selected stroke(s) to this material
+    if bpy.context.mode == 'EDIT_GPENCIL':
+        # get all the selected strokes
+        # check which ones are selected
+        # if they're selected, set their materials
+        pass
 
 
 def createMaterials():
