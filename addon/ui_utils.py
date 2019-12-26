@@ -127,13 +127,50 @@ def createMaterial(materialName, color):
 # Operator Helper Functions ----------------------------------
 def createAndSpecifyCamera():
     """create a new camera, add it to the scene, set it as the specified camera"""
+    # create the camera
     newCam = bpy.data.cameras.new(name='Pipecleaner_CameraShape')
+    newCamObject = bpy.data.objects.new('Pipecleaner_Camera', newCam)  # make a new camera object
+
+    # get current view
+    space = bpy.context.space_data
+    if space.type=='VIEW_3D':
+        # we can set the camera to this!
+        # region = space.region_3d
+        # m = region.view_matrix
+        # newCamObject.matrix_world = m # set the new camera to that matrix...
+        # newCamObject.rotation_mode = 'QUATERNION'
+        # newCamObject.rotation_quaternion = region.view_rotation
+        # newCamObject.rotation_euler = region.view_rotation.to_euler()
+        # distanceVector = newCamObject.matrix_world.to_quaternion() @ Vector((-1.0, 0.0, 0.0))
+        # distanceVector.normalize()
+        # distance = region.view_distance
+        # newCamObject.location = region.view_location + distanceVector * distance
+        
+        # cam.matrix_world.to_quaternion() @ Vector((0.0, 0.0, -1.0)) 
+        # doesn't work
+
+        # v = bpy.data.screens['Scripting'].areas[5].spaces[0].region_3d
+        # get the v.regions[4].type=='WINDOW'
+        # a = bpy.data.screens['Scripting'].areas
+        # gotta get https://docs.blender.org/api/current/bpy.types.RegionView3D.html
+
+        #previousSelection = bpy.context.selected_objects
+        #bpy.ops.object.select_all(action='DESELECT')
+        #newCamObject.select_set(True)
+        bpy.context.space_data.use_local_camera = True  # wanna use the specified camera
+        bpy.context.space_data.camera = newCamObject  # set the local camera to be this one!
+        bpy.ops.view3d.camera_to_view()
+    else:
+        # hmm probably shoulda been, but we can just make up camera coordinates
+        newCamObject.location = Vector((10.0, -10.0, 5.0))
+        newCamObject.rotation_euler = Euler((1.3089969158172607, 0.0, 0.7853981852531433), 'XYZ')
+
+    # setup new camera
     newCam.passepartout_alpha = 0.1
-    newCamObject = bpy.data.objects.new('Pipecleaner_Camera', newCam) # make a new camera
-    newCamObject.location = Vector((10.0, -10.0, 5.0))
-    newCamObject.rotation_euler = Euler((1.3089969158172607, 0.0, 0.7853981852531433), 'XYZ')
+
     bpy.context.scene.collection.objects.link(newCamObject)  # add it to the scene
     bpy.context.scene.pipecleaner_properties.camera = newCam.name  # store the cam's name
+    # toggleSpecifiedCamera()
     return
 
 
@@ -142,10 +179,9 @@ def toggleSpecifiedCamera():
     bpy.context.space_data.use_local_camera = True  # wanna use the specified camera
     bpy.context.space_data.lock_camera = False  # don't lock the camera to the view, don't wanna move it accidentally
     bpy.context.space_data.camera = getCameraObject()  # set the local camera to be this one!
+    if bpy.context.space_data.region_3d.view_perspective == 'CAMERA':
+        return  # if we're already viewing the camera, don't bother
     bpy.ops.view3d.view_camera()
-    # bpy.ops.view3d.camera_to_view
-
-    # bpy.ops.object.mode_set(mode="PAINT_GPENCIL") # don't bother, might wanna Edit instead
     return
 
 

@@ -147,7 +147,7 @@ class Pipecleaner_SetMaterialRough(bpy.types.Operator):
 
 
 class Pipecleaner_toggleSpecifiedCamera(bpy.types.Operator):
-    """Sets the active material to Rough, if it exists. Only available in Draw/Edit Modes"""
+    """Views the scene through the specified camera"""
     bl_idname = "pipecleaner.togglespecifiedcamera"
     bl_label = 'Toggle Camera'
 
@@ -158,8 +158,8 @@ class Pipecleaner_toggleSpecifiedCamera(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         c = cameraChosen()
-        gp = getActiveGreasePencilObject()
-        return c is True and gp is not None
+        # gp = getActiveGreasePencilObject()
+        return c is True  # and gp is not None
 
 
 class Pipecleaner_createAndSpecifyCamera(bpy.types.Operator):
