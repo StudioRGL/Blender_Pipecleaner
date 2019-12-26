@@ -1,11 +1,9 @@
-
 import bpy
 import math
 from mathutils import Vector, geometry, Euler
 from enum import Enum
 import sys
-# OPERATORS ---------------
-# __reload_order_index__ = 2
+
 
 print('loading util.py...')
 

@@ -1,7 +1,7 @@
 # The main code for this thang
 import sys
 import bpy
-from .util import *
+from .ui_utils import *
 
 # OPERATORS ---------------
 # __reload_order_index__ = 1
