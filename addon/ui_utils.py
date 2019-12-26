@@ -110,6 +110,19 @@ def readyToSolve():
     return readyToSolve
 
 
+def readyToViewCamera():
+    """Returns true if we could press the button to view the camera"""
+    if cameraChosen() is False:
+        return False
+    if bpy.context.space_data.type != 'VIEW_3D':
+        return False
+    # don't bother if we're already viewing it
+    if bpy.context.space_data.region_3d.view_perspective == 'CAMERA':
+        if bpy.context.space_data.use_local_camera and bpy.context.space_data.camera == getCameraObject():
+            return False
+    return True
+
+
 # Operator Helper Sub-functions-------------------------------
 def createMaterial(materialName, color):
     """Creates a grease pencil material if it doesn't already exist"""
@@ -133,7 +146,7 @@ def createAndSpecifyCamera():
 
     # get current view
     space = bpy.context.space_data
-    if space.type=='VIEW_3D':
+    if space.type == 'VIEW_3D':
         # we can set the camera to this!
         # region = space.region_3d
         # m = region.view_matrix
@@ -145,8 +158,8 @@ def createAndSpecifyCamera():
         # distanceVector.normalize()
         # distance = region.view_distance
         # newCamObject.location = region.view_location + distanceVector * distance
-        
-        # cam.matrix_world.to_quaternion() @ Vector((0.0, 0.0, -1.0)) 
+
+        # cam.matrix_world.to_quaternion() @ Vector((0.0, 0.0, -1.0))
         # doesn't work
 
         # v = bpy.data.screens['Scripting'].areas[5].spaces[0].region_3d
@@ -154,9 +167,9 @@ def createAndSpecifyCamera():
         # a = bpy.data.screens['Scripting'].areas
         # gotta get https://docs.blender.org/api/current/bpy.types.RegionView3D.html
 
-        #previousSelection = bpy.context.selected_objects
-        #bpy.ops.object.select_all(action='DESELECT')
-        #newCamObject.select_set(True)
+        # previousSelection = bpy.context.selected_objects
+        # bpy.ops.object.select_all(action='DESELECT')
+        # newCamObject.select_set(True)
         bpy.context.space_data.use_local_camera = True  # wanna use the specified camera
         bpy.context.space_data.camera = newCamObject  # set the local camera to be this one!
         bpy.ops.view3d.camera_to_view()
@@ -167,10 +180,9 @@ def createAndSpecifyCamera():
 
     # setup new camera
     newCam.passepartout_alpha = 0.1
-
     bpy.context.scene.collection.objects.link(newCamObject)  # add it to the scene
     bpy.context.scene.pipecleaner_properties.camera = newCam.name  # store the cam's name
-    # toggleSpecifiedCamera()
+    toggleSpecifiedCamera()
     return
 
 

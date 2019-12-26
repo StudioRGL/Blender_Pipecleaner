@@ -157,9 +157,9 @@ class Pipecleaner_toggleSpecifiedCamera(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        c = cameraChosen()
+        r = readyToViewCamera()
         # gp = getActiveGreasePencilObject()
-        return c is True  # and gp is not None
+        return r
 
 
 class Pipecleaner_createAndSpecifyCamera(bpy.types.Operator):
@@ -252,9 +252,13 @@ class PipecleanerPanel(bpy.types.Panel):
 
             # solve contours
             # options
-            box.row().prop(context.scene.pipecleaner_properties, "solve_respectHiddenLayers", text="Respect hidden layers")
-            box.row().prop(context.scene.pipecleaner_properties, "solve_respectLockedLayers", text="Respect locked layers")
-            
+            box.row().prop(context.scene.pipecleaner_properties,
+                           "solve_respectHiddenLayers",
+                           text="Respect hidden layers")
+            box.row().prop(context.scene.pipecleaner_properties,
+                           "solve_respectLockedLayers",
+                           text="Respect locked layers")
+
             box.row().operator("pipecleaner.solvecontours", icon="SPHERE")
 
 
@@ -266,7 +270,6 @@ class PipecleanerProperties(bpy.types.PropertyGroup):
     panelExpanded_solve: bpy.props.BoolProperty() = False
     solve_respectLockedLayers: bpy.props.BoolProperty() = True
     solve_respectHiddenLayers: bpy.props.BoolProperty() = True
-    
 
 
 def register():

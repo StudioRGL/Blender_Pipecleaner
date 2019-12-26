@@ -38,7 +38,9 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 - [ ] add vertex groups?
 - [ ] check if it works when there's not GP layers!
 - [x] remove camera passepartout
-- [ ] create camera from current view!
+- [x] create camera from current view!
+- [ ] add polling for camera toggle
+- [ ] rename camera toggle
 
 ## Usage
 
