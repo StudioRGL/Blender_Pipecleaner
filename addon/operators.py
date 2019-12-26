@@ -35,23 +35,6 @@ class Pipecleaner_AssignMaterialsOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class Pipecleaner_DetectIntersectionMarkersOperator(bpy.types.Operator):
-    """Labels all small (in bounding box area) strokes as Intersection Markers"""
-    bl_idname = "pipecleaner.detectintersectionmarkers"
-    bl_label = "Detect Intersection Markers"
-    bl_options = {"REGISTER", "UNDO"}
-    param_threshold: bpy.props.FloatProperty(name="Threshold") = 1.0
-    # param_camera: bpy.props.PointerProperty(name="MaybeCamera")
-
-    def execute(self, context):
-        convertSmallStrokesToMarkers(self.param_threshold)
-        return {'FINISHED'}
-
-    # def invoke(self, context, event):
-    #    wm = context.window_manager
-    #    return wm.invoke_props_dialog(self)
-
-
 class Pipecleaner_SolveContoursOperator(bpy.types.Operator):
     """This solves the contours for the selected greasepencil object"""
     # TODO: add options (like which camera to use, for example)
@@ -206,10 +189,10 @@ class PipecleanerPanel(bpy.types.Panel):
         if properties.panelExpanded_setup:
 
             # checklist of things
+            uiChecklist(box, "Camera specified", cameraIsChosen)
             uiChecklist(box, "Grease Pencil stroke active", gpFound)
             uiChecklist(box, "Materials created", materialsFound)
             uiChecklist(box, "Materials assigned", materialsAreAssigned)
-            uiChecklist(box, "Camera specified", cameraIsChosen)
             uiChecklist(box, "Ready!", isReadyToSolve)
 
             # get the camera
@@ -251,10 +234,6 @@ class PipecleanerPanel(bpy.types.Panel):
             if gpFound is False or materialsFound is False or materialsAreAssigned is False:
                 return  # we can't continue until it's setup properly
 
-            # set intersection markers
-            row = box.row()
-            row.operator("pipecleaner.detectintersectionmarkers", icon='SNAP_MIDPOINT')
-
             # solve contours
             row = box.row()
             row.operator("pipecleaner.solvecontours", icon="SPHERE")
@@ -270,7 +249,6 @@ class PipecleanerPanel(bpy.types.Panel):
 class PipecleanerProperties(bpy.types.PropertyGroup):
     """Scene properties that are used for the addon"""
     camera: bpy.props.StringProperty() = ""
-    intersectionMarkerAreaThreshold: bpy.props.FloatProperty() = 1.0
     panelExpanded_setup: bpy.props.BoolProperty() = True
     panelExpanded_draw: bpy.props.BoolProperty() = False
     panelExpanded_edit: bpy.props.BoolProperty() = False

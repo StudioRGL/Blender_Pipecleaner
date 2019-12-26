@@ -612,12 +612,6 @@ class PlanarStroke(Stroke):
             self.gpStroke.select = select
 
 
-def convertSmallStrokesToMarkers(threshold=1):
-    """takes any stroke below a certain polar bounding box size and sets its material to be the intersection material"""
-
-    return
-
-
 def getActiveGreasePencilObject():
     gp = bpy.context.active_object
     if gp is None:
@@ -657,7 +651,6 @@ def getStrokeData(camera):
     and sorts into strokes and intersectionMarkers"""
     planarStrokes = []
     intersectionMarkers = []
-    INTERSECTION_MARKER_THRESHOLD = 0.1  # this is now in ANGULAR AREA
 
     gp = getActiveGreasePencilObject()
     if gp is None:
@@ -680,15 +673,15 @@ def getStrokeData(camera):
             # it's an intersection marker
             # set the material (maybe redundant)
             itsAMarker = True
-        else:
-            # make a temp stroke to check area
-            tempStroke = Stroke(stroke, camera)
-            bBoxArea = tempStroke.bBoxArea()
-            if bBoxArea < INTERSECTION_MARKER_THRESHOLD:
-                itsAMarker = True
-                # set the mat, cos it wasn't set
-                stroke.material_index = gp.data.materials.keys().index(materialNames().intersection)
-                # by material name
+        # else:
+        #     # make a temp stroke to check area
+        #     tempStroke = Stroke(stroke, camera)
+        #     bBoxArea = tempStroke.bBoxArea()
+        #     if bBoxArea < INTERSECTION_MARKER_THRESHOLD:
+        #         itsAMarker = True
+        #         # set the mat, cos it wasn't set
+        #         stroke.material_index = gp.data.materials.keys().index(materialNames().intersection)
+        #         # by material name
 
         if itsAMarker:
             # create an intersectionLine from it
