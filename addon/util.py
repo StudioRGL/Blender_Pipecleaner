@@ -851,14 +851,9 @@ def uiDropDown(layout, propertyLocation, propertyString, property, name):
 
 def drawFromSpecifiedCamera():
     bpy.context.space_data.use_local_camera = True
-    #camObj = bpy.data.cameras[bpy.context.scene.pipecleaner_properties.camera]
-    for o in bpy.data.objects:
-        if bpy.context.scene.pipecleaner_properties.camera in o.data:
-            bpy.context.space_data.camera = o
-            break
+    bpy.context.space_data.camera = getCameraObject()
     bpy.ops.view3d.view_camera()
     bpy.ops.object.mode_set(mode="PAINT_GPENCIL")
-    #bpy.ops.object.set_object_mode_pie(mode="PAINT_GPENCIL")
     return
 
 
@@ -873,12 +868,21 @@ def createAndSpecifyCamera():
     return
 
 
+def getCameraObject():
+    """searches all the objects until it finds the user of the camera datablock"""
+    for o in bpy.data.objects:
+        # compare the name strings
+        if o.data.name_full == bpy.context.scene.pipecleaner_properties.camera:
+            return o
+    return None
+
+
 def solveContours():
     """ok, so I guess this is gonna be the big guy"""
     print('-' * 100 + '\nsolving contours....')
 
     # get the camera info
-    camera = camera(bpy.data.objects[bpy.context.scene.pipecleaner_properties.camera])  # Camera(bpy.context.scene.camera)
+    camera = Camera(getCameraObject())  # Camera(bpy.context.scene.camera)
 
     # build a list of what intersections affect what strokes:
     planarStrokes, intersectionMarkers = getStrokeData(camera)    # - build a dict of intersections and a dict of strokes

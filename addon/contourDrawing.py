@@ -28,7 +28,7 @@ class Pipecleaner_AssignMaterialsOperator(bpy.types.Operator):
     """This assigns the required special materials to the selected Grease Pencil Stroke"""
     # TODO: write this!
     bl_idname = "pipecleaner.assignmaterials"
-    bl_label = "Assign Materials to Stroke"
+    bl_label = "Assign Materials to GP"
 
     @classmethod
     def poll(cls, context):

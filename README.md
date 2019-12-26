@@ -29,6 +29,8 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 - [ ] better names for materialsExist etc
 - [ ] make 'add camera' before GP and fill in box
 - [ ] make sure 'solve contours' uses the correct camera
+- [ ] add generic function to get camera OBJECT from camera SHAPE NAME
+- [ ] separate UI helper functions from solver helper functions
 
 ## Usage
 
