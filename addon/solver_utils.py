@@ -780,7 +780,8 @@ def solveContours():
 
     # check that we found anything at all
     if (len(planarStrokes) < 2):
-        raise(Exception('Not enough planar strokes found: ' + str(len(planarStrokes))))
+        return  # don't need an exception, just quite while we're ahead
+        # raise(Exception('Not enough planar strokes found: ' + str(len(planarStrokes))))
 
     # ok, so, refactored version would be:
     clusters = getClusters(planarStrokes)  # create clusters of all directly-connected axial strokes

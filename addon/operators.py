@@ -146,10 +146,10 @@ class Pipecleaner_SetMaterialRough(bpy.types.Operator):
         return readyToSetActiveMaterial(materialNames().rough)
 
 
-class Pipecleaner_toggleSpecifiedCamera(bpy.types.Operator):
+class Pipecleaner_viewSpecifiedCamera(bpy.types.Operator):
     """Views the scene through the specified camera"""
-    bl_idname = "pipecleaner.togglespecifiedcamera"
-    bl_label = 'Toggle Camera'
+    bl_idname = "pipecleaner.viewspecifiedcamera"
+    bl_label = 'View Drawing Camera'
 
     def execute(self, context):
         toggleSpecifiedCamera()
@@ -170,6 +170,36 @@ class Pipecleaner_createAndSpecifyCamera(bpy.types.Operator):
 
     def execute(self, context):
         createAndSpecifyCamera()
+        return{'FINISHED'}
+
+
+class Pipecleaner_joinStrokes(bpy.types.Operator):
+    """creates a new camera in a default location, and sets it as the 'specified' camera"""
+    bl_idname = "pipecleaner.joinstrokes"
+    bl_label = 'Join Strokes'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return readyToDoStrokeEdit()
+
+    def execute(self, context):
+        joinStrokes()
+        return{'FINISHED'}
+
+
+class Pipecleaner_splitStrokes(bpy.types.Operator):
+    """creates a new camera in a default location, and sets it as the 'specified' camera"""
+    bl_idname = "pipecleaner.splitstrokes"
+    bl_label = 'Split Strokes'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return readyToDoStrokeEdit()
+
+    def execute(self, context):
+        splitStrokes()
         return{'FINISHED'}
 
 
@@ -231,7 +261,7 @@ class PipecleanerPanel(bpy.types.Panel):
         box = uiDropDown(layout, properties, "panelExpanded_draw", properties.panelExpanded_draw, "Draw & Edit")
         if properties.panelExpanded_draw:
             row = box.row()
-            row.operator('pipecleaner.togglespecifiedcamera')
+            row.operator('pipecleaner.viewspecifiedcamera')
             row = box.row()
             row.label(text='Material Quick Select')
             row = box.row()
@@ -242,13 +272,16 @@ class PipecleanerPanel(bpy.types.Panel):
             row.operator('pipecleaner.setmaterial_arbitrary')
             row.operator('pipecleaner.setmaterial_intersection')
             row.operator('pipecleaner.setmaterial_rough')
+            row = box.row()
+            row.operator('pipecleaner.joinstrokes')
+            row.operator('pipecleaner.splitstrokes')
 
         # SOLVE dropdown
         box = uiDropDown(layout, properties, "panelExpanded_solve", properties.panelExpanded_solve, "Solve")
         if properties.panelExpanded_solve:
 
-            if gpFound is False or materialsFound is False or materialsAreAssigned is False:
-                return  # we can't continue until it's setup properly
+            # if gpFound is False or materialsFound is False or materialsAreAssigned is False:
+            #     return  # we can't continue until it's setup properly
 
             # solve contours
             # options
@@ -277,7 +310,3 @@ def register():
     # bpy.types.Scene.my_addon = bpy.props.PointerProperty(type=PipecleanerProperties)
     # print ('registered extra properties')
     bpy.types.Scene.pipecleaner_properties = bpy.props.PointerProperty(type=PipecleanerProperties)
-    pass
-
-
-print('Finished running code.')

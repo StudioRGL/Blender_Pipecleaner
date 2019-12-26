@@ -33,14 +33,15 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 - [x] combine Draw & Edit
 - [x] make 'draw from camera' not a toggle, maybe also for edit mode
 - [ ] add helpful descriptions to operators
-- [ ] write objectHasMaterialAssigned
+- [x] write objectHasMaterialAssigned
 - [x] add undos to everything!
 - [ ] add vertex groups?
 - [ ] check if it works when there's not GP layers!
 - [x] remove camera passepartout
 - [x] create camera from current view!
-- [ ] add polling for camera toggle
-- [ ] rename camera toggle
+- [x] add polling for camera toggle
+- [x] rename camera toggle
+- [x] bug with contour button appearing?
 
 ## Usage
 

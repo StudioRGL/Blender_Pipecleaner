@@ -64,6 +64,12 @@ def readyToSetActiveMaterial(materialEnum):
         return False
 
 
+def readyToDoStrokeEdit():
+    if bpy.context.mode != 'EDIT_GPENCIL':
+        return False
+    return True
+
+
 def materialsExist():
     """check if the materials exist in the scene"""
     # TODO: check that these are GREASE PENCIL materials
@@ -256,3 +262,32 @@ def assignMaterials():
             # return False
         # gp.data.materials.append(matData)
     return True
+
+
+def joinStrokes():
+    """Just a wrapper for the existing operation"""
+    bpy.ops.gpencil.stroke_join(leave_gaps=True)
+
+
+def splitStrokes():
+    """sadly, more complicated"""
+    strokes = getActiveGreasePencilStrokes()
+    pointsToDelete = []
+    bpy.ops.gpencil.selectmode_toggle(mode=0)
+
+    for stroke in strokes:
+        if stroke.select:
+            # for test
+            # stroke = C.active_object.data.layers[0].frames[0].strokes[0]
+            # bpy.ops.select_all()
+            for point in stroke.points:
+                if point.strength == 0:
+                    pointsToDelete.append(point)
+                point.select = False
+
+    for point in pointsToDelete:
+        point.select = True
+
+    bpy.ops.gpencil.delete(type='POINTS')
+
+    return
