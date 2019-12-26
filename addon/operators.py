@@ -5,10 +5,11 @@ from .ui_utils import *
 
 
 class Pipecleaner_CreateMaterialsOperator(bpy.types.Operator):
-    """This adds the required special materials to the scene"""
+    """Adds the required specially-named Grease Pencil materials to the scene"""
     # TODO: write this!
     bl_idname = "pipecleaner.creatematerials"
     bl_label = "Create Materials"
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -20,10 +21,13 @@ class Pipecleaner_CreateMaterialsOperator(bpy.types.Operator):
 
 
 class Pipecleaner_AssignMaterialsOperator(bpy.types.Operator):
-    """This assigns the required special materials to the selected Grease Pencil Stroke"""
+    """Assigns the required specially-named materials to the selected Grease Pencil object.
+Only available when the materials have been created and a Grease Pencil Object is active"""
+
     # TODO: write this!
     bl_idname = "pipecleaner.assignmaterials"
     bl_label = "Assign Materials to GP"
+    bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context):
@@ -36,10 +40,16 @@ class Pipecleaner_AssignMaterialsOperator(bpy.types.Operator):
 
 
 class Pipecleaner_SolveContoursOperator(bpy.types.Operator):
-    """This solves the contours for the selected greasepencil object"""
+    """This solves the contours for the selected Grease Pencil object.
+Only available when all setup steps have been completed"""
     # TODO: add options (like which camera to use, for example)
     bl_idname = "pipecleaner.solvecontours"
-    bl_label = "Solve Contours"
+    bl_label = "Solve Contours!"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return readyToSolve()
 
     def execute(self, context):
         solveContours()
@@ -47,9 +57,10 @@ class Pipecleaner_SolveContoursOperator(bpy.types.Operator):
 
 
 class Pipecleaner_SetMaterialX(bpy.types.Operator):
-    """Sets the active material to X, if it exists and we're in stroke mode"""
+    """Sets the active material to X, if it exists. Only available in Draw/Edit Modes"""
     bl_idname = "pipecleaner.setmaterial_x"
     bl_label = 'X'
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         setActiveMaterial(materialNames().x)
@@ -61,9 +72,10 @@ class Pipecleaner_SetMaterialX(bpy.types.Operator):
 
 
 class Pipecleaner_SetMaterialY(bpy.types.Operator):
-    """Sets the active material to Y, if it exists and we're in stroke mode"""
+    """Sets the active material to Y, if it exists. Only available in Draw/Edit Modes"""
     bl_idname = "pipecleaner.setmaterial_y"
     bl_label = 'Y'
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         setActiveMaterial(materialNames().y)
@@ -75,9 +87,10 @@ class Pipecleaner_SetMaterialY(bpy.types.Operator):
 
 
 class Pipecleaner_SetMaterialZ(bpy.types.Operator):
-    """Sets the active material to Z, if it exists and we're in stroke mode"""
+    """Sets the active material to Z, if it exists. Only available in Draw/Edit Modes"""
     bl_idname = "pipecleaner.setmaterial_z"
     bl_label = 'Z'
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         setActiveMaterial(materialNames().z)
@@ -89,9 +102,10 @@ class Pipecleaner_SetMaterialZ(bpy.types.Operator):
 
 
 class Pipecleaner_SetMaterialArbitrary(bpy.types.Operator):
-    """Sets the active material to Arbitrary, if it exists and we're in stroke mode"""
+    """Sets the active material to Arbitrary, if it exists. Only available in Draw/Edit Modes"""
     bl_idname = "pipecleaner.setmaterial_arbitrary"
     bl_label = 'Arbitrary'
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         setActiveMaterial(materialNames().arbitrary)
@@ -103,9 +117,10 @@ class Pipecleaner_SetMaterialArbitrary(bpy.types.Operator):
 
 
 class Pipecleaner_SetMaterialIntersection(bpy.types.Operator):
-    """Sets the active material to Intersection, if it exists and we're in stroke mode"""
+    """Sets the active material to Intersection, if it exists. Only available in Draw/Edit Modes"""
     bl_idname = "pipecleaner.setmaterial_intersection"
     bl_label = 'Intersection'
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         setActiveMaterial(materialNames().intersection)
@@ -117,9 +132,10 @@ class Pipecleaner_SetMaterialIntersection(bpy.types.Operator):
 
 
 class Pipecleaner_SetMaterialRough(bpy.types.Operator):
-    """Sets the active material to Rough, if it exists and we're in stroke mode"""
+    """Sets the active material to Rough, if it exists. Only available in Draw/Edit Modes"""
     bl_idname = "pipecleaner.setmaterial_rough"
     bl_label = 'Rough'
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         setActiveMaterial(materialNames().rough)
@@ -130,13 +146,13 @@ class Pipecleaner_SetMaterialRough(bpy.types.Operator):
         return readyToSetActiveMaterial(materialNames().rough)
 
 
-class Pipecleaner_DrawFromSpecifiedCamera(bpy.types.Operator):
-    """Sets the active material to Rough, if it exists and we're in stroke mode"""
-    bl_idname = "pipecleaner.drawfromspecifiedcamera"
-    bl_label = 'Draw from Camera'
+class Pipecleaner_toggleSpecifiedCamera(bpy.types.Operator):
+    """Sets the active material to Rough, if it exists. Only available in Draw/Edit Modes"""
+    bl_idname = "pipecleaner.togglespecifiedcamera"
+    bl_label = 'Toggle Camera'
 
     def execute(self, context):
-        drawFromSpecifiedCamera()
+        toggleSpecifiedCamera()
         return{'FINISHED'}
 
     @classmethod
@@ -150,6 +166,7 @@ class Pipecleaner_createAndSpecifyCamera(bpy.types.Operator):
     """creates a new camera in a default location, and sets it as the 'specified' camera"""
     bl_idname = "pipecleaner.createandspecifycamera"
     bl_label = 'Create Camera'
+    bl_options = {'REGISTER', 'UNDO'}
 
     def execute(self, context):
         createAndSpecifyCamera()
@@ -196,7 +213,7 @@ class PipecleanerPanel(bpy.types.Panel):
             uiChecklist(box, "Ready!", isReadyToSolve)
 
             # get the camera
-            box.prop_search(properties, "camera", bpy.data, "cameras", icon='CAMERA_DATA')  # select camera!
+            box.prop_search(properties, "camera", bpy.data, "cameras", text='Camera', icon='CAMERA_DATA')
 
             row = box.row()
             row.operator('pipecleaner.createandspecifycamera', icon='OUTLINER_OB_CAMERA')
@@ -211,10 +228,12 @@ class PipecleanerPanel(bpy.types.Panel):
             row.operator('pipecleaner.assignmaterials', icon='MATERIAL')
 
         # DRAW dropdown
-        box = uiDropDown(layout, properties, "panelExpanded_draw", properties.panelExpanded_draw, "Draw")
+        box = uiDropDown(layout, properties, "panelExpanded_draw", properties.panelExpanded_draw, "Draw & Edit")
         if properties.panelExpanded_draw:
             row = box.row()
-            row.operator('pipecleaner.drawfromspecifiedcamera')
+            row.operator('pipecleaner.togglespecifiedcamera')
+            row = box.row()
+            row.label(text='Material Quick Select')
             row = box.row()
             row.operator('pipecleaner.setmaterial_x')
             row.operator('pipecleaner.setmaterial_y')
@@ -224,9 +243,6 @@ class PipecleanerPanel(bpy.types.Panel):
             row.operator('pipecleaner.setmaterial_intersection')
             row.operator('pipecleaner.setmaterial_rough')
 
-        # SETUP dropdown
-        box = uiDropDown(layout, properties, "panelExpanded_edit", properties.panelExpanded_edit, "Edit")
-
         # SOLVE dropdown
         box = uiDropDown(layout, properties, "panelExpanded_solve", properties.panelExpanded_solve, "Solve")
         if properties.panelExpanded_solve:
@@ -235,15 +251,11 @@ class PipecleanerPanel(bpy.types.Panel):
                 return  # we can't continue until it's setup properly
 
             # solve contours
-            row = box.row()
-            row.operator("pipecleaner.solvecontours", icon="SPHERE")
-
-            # row = layout.row()
-            # row.label(text="Pipecleaner Tools", icon='WORLD_DATA')
-            # row = layout.row()
-            # row.label(text="Active object is: " + obj.name)
-            # row = layout.row()
-            # row.prop(obj, "name")
+            # options
+            box.row().prop(context.scene.pipecleaner_properties, "solve_respectHiddenLayers", text="Respect hidden layers")
+            box.row().prop(context.scene.pipecleaner_properties, "solve_respectLockedLayers", text="Respect locked layers")
+            
+            box.row().operator("pipecleaner.solvecontours", icon="SPHERE")
 
 
 class PipecleanerProperties(bpy.types.PropertyGroup):
@@ -251,8 +263,10 @@ class PipecleanerProperties(bpy.types.PropertyGroup):
     camera: bpy.props.StringProperty() = ""
     panelExpanded_setup: bpy.props.BoolProperty() = True
     panelExpanded_draw: bpy.props.BoolProperty() = False
-    panelExpanded_edit: bpy.props.BoolProperty() = False
     panelExpanded_solve: bpy.props.BoolProperty() = False
+    solve_respectLockedLayers: bpy.props.BoolProperty() = True
+    solve_respectHiddenLayers: bpy.props.BoolProperty() = True
+    
 
 
 def register():

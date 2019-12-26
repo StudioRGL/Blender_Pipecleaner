@@ -128,20 +128,24 @@ def createMaterial(materialName, color):
 def createAndSpecifyCamera():
     """create a new camera, add it to the scene, set it as the specified camera"""
     newCam = bpy.data.cameras.new(name='Pipecleaner_CameraShape')
-    newCamObject = bpy.data.objects.new('Pipecleaner_Camera', newCam)
+    newCam.passepartout_alpha = 0.1
+    newCamObject = bpy.data.objects.new('Pipecleaner_Camera', newCam) # make a new camera
     newCamObject.location = Vector((10.0, -10.0, 5.0))
     newCamObject.rotation_euler = Euler((1.3089969158172607, 0.0, 0.7853981852531433), 'XYZ')
-    bpy.context.scene.collection.objects.link(newCamObject)
-    bpy.context.scene.pipecleaner_properties.camera = newCam.name
+    bpy.context.scene.collection.objects.link(newCamObject)  # add it to the scene
+    bpy.context.scene.pipecleaner_properties.camera = newCam.name  # store the cam's name
     return
 
 
-def drawFromSpecifiedCamera():
+def toggleSpecifiedCamera():
     """sets the view to the specified camera, and the mode to 'draw'"""
-    bpy.context.space_data.use_local_camera = True
-    bpy.context.space_data.camera = getCameraObject()
+    bpy.context.space_data.use_local_camera = True  # wanna use the specified camera
+    bpy.context.space_data.lock_camera = False  # don't lock the camera to the view, don't wanna move it accidentally
+    bpy.context.space_data.camera = getCameraObject()  # set the local camera to be this one!
     bpy.ops.view3d.view_camera()
-    bpy.ops.object.mode_set(mode="PAINT_GPENCIL")
+    # bpy.ops.view3d.camera_to_view
+
+    # bpy.ops.object.mode_set(mode="PAINT_GPENCIL") # don't bother, might wanna Edit instead
     return
 
 

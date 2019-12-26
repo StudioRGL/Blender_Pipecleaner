@@ -632,8 +632,15 @@ def getActiveGreasePencilStrokes():
     if gp is None:
         return strokes  # which will have length = 0
 
+    respectLocked = bpy.context.scene.pipecleaner_properties.solve_respectLockedLayers
+    respectHidden = bpy.context.scene.pipecleaner_properties.solve_respectHiddenLayers
+
     # layer = gp.data.layers.active # nah let's do all layers
     for layer in gp.data.layers:
+        if respectLocked and layer.lock:
+            continue  # skip locked layers if we're told to
+        if respectHidden and layer.hide:
+            continue  # skip hidden layers if we're told to
         frames = layer.frames.values()
         currentFrameFound = False
         for frame in frames:
@@ -641,8 +648,8 @@ def getActiveGreasePencilStrokes():
                 currentFrameFound = True
                 strokes += frame.strokes.values()  # add them on to the strokes
         if currentFrameFound is False:
-            raise(Exception("couldn't find any gpencil data for current frame, doing nothing!"))
-            # TODO: maybe shouldn't be an exception here!
+            # raise(Exception("couldn't find any gpencil data for current frame, doing nothing!"))
+            continue  # ah, nothing on this layer, keep goin
     return strokes
 
 
