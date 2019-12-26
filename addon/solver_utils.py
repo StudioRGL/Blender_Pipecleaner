@@ -57,7 +57,8 @@ def averageVectors(vectorList):
 
 
 def colinear(p0, p1, p2):
-    """from https://stackoverflow.com/questions/9608148/python-script-to-determine-if-x-y-coordinates-are-colinear-getting-some-e"""
+    """from https://stackoverflow.com/questions/9608148/
+    python-script-to-determine-if-x-y-coordinates-are-colinear-getting-some-e"""
     x1, y1 = p1[0] - p0[0], p1[1] - p0[1]
     x2, y2 = p2[0] - p0[0], p2[1] - p0[1]
     return abs(x1 * y2 - x2 * y1) < 1e-12
@@ -91,12 +92,14 @@ class Camera():
         self.camera = cam
         self.origin = cam.location
         # TODO: we're not actually using rotation now we have direction vector, right?
-        rotation_euler = cam.rotation_euler
-        if rotation_euler.order != 'XYZ':
-            raise(Exception('This has only been tested with the default XYZ rotation order on cameras, you probably wanna change that back'))
-        self.heading = math.degrees(rotation_euler[0])  # in radians, we actually might not even need this?!
-        self.elevation = math.degrees(rotation_euler[2])
-        self.direction = cam.matrix_world.to_quaternion() @ Vector((0.0, 0.0, -1.0))  # it's a vector now, what else do ya want https://blender.stackexchange.com/questions/13738/how-to-calculate-the-direction-and-up-vector-of-a-camera
+        # rotation_euler = cam.rotation_euler
+        # if rotation_euler.order != 'XYZ':
+        #     raise(Exception('This has only been tested with the default XYZ rotation order on cameras,
+        # you probably wanna change that back'))
+        # self.heading = math.degrees(rotation_euler[0])  # in radians, we actually might not even need this?!
+        # self.elevation = math.degrees(rotation_euler[2])
+        self.direction = cam.matrix_world.to_quaternion() @ Vector((0.0, 0.0, -1.0))  # it's a vector now
+        # https://blender.stackexchange.com/questions/13738/how-to-calculate-the-direction-and-up-vector-of-a-camera
         print('got camera, position', self.origin, ', heading', self.heading, ', elevation', self.elevation)
 
 
@@ -110,7 +113,9 @@ class PlanarStrokeCluster():
         We give it one stroke and it should connect the dots"""
         # self.strokes = [firstStroke] # should it be a set? those can't be mutable, though
         self.strokes = [firstStroke]
-        self.strokes += firstStroke.allConnectedPlanarStrokes(strokeTypes=[StrokeType.planar_axial], connectionList=[firstStroke])  # add all connected planar strokes
+        # add all connected planar strokes
+        self.strokes += firstStroke.allConnectedPlanarStrokes(strokeTypes=[StrokeType.planar_axial],
+                                                              connectionList=[firstStroke])
         # we DON'T need to give it existing clusters because all strokes in
         # that cluster would already be in a cluster and by definition can't
         # be connected to this one
@@ -118,7 +123,8 @@ class PlanarStrokeCluster():
 
     def __repr__(self):
         """The print statement"""
-        return ('PlanarStrokeCluster with ' + str(len(self.strokes)) + ' strokes and ' + str(len(self.potentialConnections)) + ' potential connections')
+        return ('PlanarStrokeCluster with ' + str(len(self.strokes)) + ' strokes and '
+                + str(len(self.potentialConnections)) + ' potential connections')
 
     def __lt__(self, other):
         """ the one with less connections is less"""
@@ -134,7 +140,8 @@ class PlanarStrokeCluster():
             raise(Exception("could not get 'most connected stroke' from empty stroke cluster"))
 
     def replaneCluster(self, testOnly=False):
-        """ ok so this either tries to, or does, propogate from the mostConnectedStroke through the whole network, alternately doing rounds of axial and arbitrary strokes"""
+        """ ok so this either tries to, or does, propogate from the mostConnectedStroke through the
+        whole network, alternately doing rounds of axial and arbitrary strokes"""
         # set up the first stroke or it ain't gonna work!
         firstStroke = self.mostConnectedStroke()
 
@@ -148,23 +155,33 @@ class PlanarStrokeCluster():
         i = 0
         MAX_ITERATIONS = 9999  # hmmmm not sure this is good coding practise?
 
-        # ok we're gonna keep expanding outwards, alternatley by axial strokes (1 connection required) and arbitrary strokes (3 connections required)
+        # ok we're gonna keep expanding outwards, alternatley by axial strokes (1 connection required) and
+        # arbitrary strokes (3 connections required)
         # we're gonna keep doing this until we stop getting new connections...
         while i < MAX_ITERATIONS:
             i += 1  # iterate the counter, just to be safe :-)
 
-            newlyConnectedStrokes = []  # keep track of what strokes have been added in this iteration - if we don't get any new ones then we got em all
-            for strokeType in [StrokeType.planar_axial, StrokeType.planar_arbitrary]:  # alternate between doing axial and arbitrary strokes
-                for stroke in currentlyConnectedStrokes:  # this will increase (hopefully) on each iteration
-                    for potentialNewConnection in stroke.adjacentPlanarStrokes():  # get all the strokes directly attached to the current one
+            # keep track of what strokes have been added in this iteration -
+            # if we don't get any new ones then we got em all
+            newlyConnectedStrokes = []
+            # alternate between doing axial and arbitrary strokes
+            for strokeType in [StrokeType.planar_axial, StrokeType.planar_arbitrary]:
+                # this will increase (hopefully) on each iteration
+                for stroke in currentlyConnectedStrokes:
+                    # get all the strokes directly attached to the current one
+                    for potentialNewConnection in stroke.adjacentPlanarStrokes():
                         if potentialNewConnection.strokeType == strokeType:
-                            if potentialNewConnection not in currentlyConnectedStrokes + newlyConnectedStrokes:  # if they're not already connected (some will have multiple connections, and we don't wanna repeat)
+                            # if they're not already connected (some will have multiple connections,
+                            # and we don't wanna repeat)
+                            if potentialNewConnection not in currentlyConnectedStrokes + newlyConnectedStrokes:
                                 # seems to be a new one!
 
                                 # ok, so the simpler version is to just 'try to replane' here, if it works it works
-                                successfullyCalculatedNormalsAndOrigin = potentialNewConnection.calculateNormalAndOrigin(connectedStrokes=(currentlyConnectedStrokes + newlyConnectedStrokes), testOnly=testOnly)
+                                cs = currentlyConnectedStrokes + newlyConnectedStrokes
+                                success = potentialNewConnection.calculateNormalAndOrigin(connectedStrokes=cs,
+                                                                                          testOnly=testOnly)
 
-                                if successfullyCalculatedNormalsAndOrigin:
+                                if success:
                                     if testOnly is False:
                                         potentialNewConnection.rePlane()
                                     newlyConnectedStrokes.append(potentialNewConnection)    # add them to the list
@@ -188,7 +205,7 @@ class Stroke():
         # whatever internal stuffs it has
         self.gpStroke = gpStroke
         self.polarPoints = []
-        self.intersections = {}  # this is going to be in key/value pairs, with key = object and value = polar coordinate
+        self.intersections = {}  # this is going to be key/value pairs, with key = object and value = polar coordinate
         self.bBox_phiMin = None
         self.bBox_phiMax = None
         self.bBox_thetaMin = None
@@ -244,7 +261,8 @@ class Stroke():
         """ used for storing intersectionMarkers on planarStrokes and vice versa"""
         # print ('adding intersection', intersectingObject, polarCoordinate)
         self.intersections[intersectingObject] = polarCoordinate  # that should do it, right?
-        # doesn't check if they already intersecting, which might be ok because sometimes we'll want several markers on the same stroke
+        # doesn't check if they already intersecting, which might be ok because sometimes
+        # we'll want several markers on the same stroke
 
     # -------------------------------------------------------------------------------------------------------
     # from https://stackoverflow.com/questions/3838329/how-can-i-check-if-two-segments-intersect
@@ -252,7 +270,10 @@ class Stroke():
         '''Given three colinear points p, q, r, the function checks if
         point q lies on line segment "pr"
         '''
-        if (q[0] <= max(p[0], r[0]) and q[0] >= min(p[0], r[0]) and q[1] <= max(p[1], r[1]) and q[1] >= min(p[1], r[1])):
+        if (q[0] <= max(p[0], r[0])
+           and q[0] >= min(p[0], r[0])
+           and q[1] <= max(p[1], r[1])
+           and q[1] >= min(p[1], r[1])):
             return True
         return False
 
@@ -347,10 +368,16 @@ class Stroke():
                         lineB_x2 = b.polarPoints[jSegment + 1][1]  # 0 is radius, remember
                         lineB_y2 = b.polarPoints[jSegment + 1][2]
 
-                        if self.do_intersect((lineA_x1, lineA_y1), (lineA_x2, lineA_y2), (lineB_x1, lineB_y1), (lineB_x2, lineB_y2)):
+                        if self.do_intersect((lineA_x1, lineA_y1),
+                                             (lineA_x2, lineA_y2),
+                                             (lineB_x1, lineB_y1),
+                                             (lineB_x2, lineB_y2)):
                             # ok and let's find the real intersection:
                             # slopeA = (lineA_x2-lineA_x1)/(lineA_y2-lineA_y1) # doesn't work if y is 0
-                            ip = self.get_lineIntersectionPoint([lineA_x1, lineA_y1], [lineA_x2, lineA_y2], [lineB_x1, lineB_y1], [lineB_x2, lineB_y2])
+                            ip = self.get_lineIntersectionPoint([lineA_x1, lineA_y1],
+                                                                [lineA_x2, lineA_y2],
+                                                                [lineB_x1, lineB_y1],
+                                                                [lineB_x2, lineB_y2])
                             return ip  # just the [phi, theta]
         return None
 
@@ -438,15 +465,19 @@ class PlanarStroke(Stroke):
         """assuming the plane has been defined (we know its origin and normal), this calculates the cartesian
         position of the polar coordinate (from the camera)"""
         p0 = self.cameraOrigin  # p0, p1: define the line
-        p1 = Vector(polarToCartesian(1, polarCoordinate[0], polarCoordinate[1])) + self.cameraOrigin  # eh gotta get the xyz from the polar, dang. MAYBE CHECK - need to compensate for cam origin not being at zero so added it...?
+        p1 = Vector(polarToCartesian(1, polarCoordinate[0], polarCoordinate[1])) + self.cameraOrigin
+        # eh gotta get the xyz from the polar, dang. MAYBE CHECK - need to compensate for cam origin
+        # not being at zero so added it...
         p_co = self.origin  # p_co is a point on the plane (plane coordinate).
         p_no = self.normal  # p_no is a normal vector defining the plane direction (does not need to be normalized).
         cartesianCoordinate = geometry.intersect_line_plane(p0, p1, p_co, p_no)
         return cartesianCoordinate
 
     def calculateNormalAndOrigin(self, connectedStrokes=[], testOnly=False):
-        """Recalculates all the point coordinates. Uses the strokes in clusterConnections to get the values we need: polar coordinates, cameraOrigin, normal and origin
-        If it's an arbitrary plane, no normal has been specified, searches all intersecting planes to try to find 3 that have been placed!
+        """Recalculates all the point coordinates. Uses the strokes in clusterConnections to get the values we need:
+        polar coordinates, cameraOrigin, normal and origin
+        If it's an arbitrary plane, no normal has been specified, searches all intersecting planes to try to find 3
+        that have been placed!
         returns true if it worked, false if it didn't
         """
 
@@ -477,7 +508,8 @@ class PlanarStroke(Stroke):
             # try to find the correct number of anchor points
             anchorPoints = []
             for intersectingStroke in connectedStrokes:
-                # we can safely (?) assume that the plane of this one has been defined, otherwise it shouldn't be connected
+                # we can safely (?) assume that the plane of this one has been defined,
+                # otherwise it shouldn't be connected
                 intersectionsWithThisStroke = self.getScreenSpaceIntersections(intersectingStroke)
                 for intersectionWithThisStroke in intersectionsWithThisStroke:
                     if testOnly:
@@ -488,7 +520,9 @@ class PlanarStroke(Stroke):
                     else:
                         # ok, this is the screenspace coordinate, we can get where it is reasonably easily
                         # where the angular line intersects with the replaneStroke's plane
-                        cartesianCoordinate = intersectingStroke.polarToCartesianPositionOfIntesection([intersectionWithThisStroke[0], intersectionWithThisStroke[1]])
+                        cartesianCoordinate =
+                        intersectingStroke.polarToCartesianPositionOfIntesection([intersectionWithThisStroke[0],
+                                                                                 intersectionWithThisStroke[1]])
                         if cartesianCoordinate is None:
                             raise(Exception("Intersection point = None on stroke: ", self))
                         anchorPoints.append(cartesianCoordinate)
@@ -529,9 +563,10 @@ class PlanarStroke(Stroke):
                 cross = v1.cross(v2)
 
                 # check they're not colinear
-                if cross.length <= 0.002:  # sure, could use better epsilon, but the result's gonna be rubbish even if they're only *almost* colinear
-                    # raise(Exception('Points are colinear, oh no'))  # TODO: do something useful instead of crashing
-                    return False  # TODO: temp HACK
+                if cross.length <= 0.002:
+                    # sure, could use better epsilon,but the result's gonna be rubbish even
+                    # if they're only *almost* colinear
+                    return False  # TODO: temp HACK, should really look for BEST points
 
                 self.normal = cross
 
@@ -556,7 +591,8 @@ class PlanarStroke(Stroke):
         return answer
 
     def allConnectedPlanarStrokes(self, strokeTypes=[StrokeType.planar_axial], connectionList=[]):
-        """recursively returns connected strokes with the specified types. The ConnectionList parameter contains previously detected connections, otherwise we're gonna
+        """recursively returns connected strokes with the specified types. The ConnectionList
+        parameter contains previously detected connections, otherwise we're gonna
         end up redoing them loads of times! """
         # go through all strokes to this one
         newConnectionList = []
@@ -564,8 +600,10 @@ class PlanarStroke(Stroke):
             if intersectingStroke not in connectionList:  # ok, if it hasn't already been done
                 if intersectingStroke.strokeType in strokeTypes:
                     newConnectionList.append(intersectingStroke)
-                    newConnectionList += intersectingStroke.allConnectedPlanarStrokes(strokeTypes=strokeTypes, connectionList=(connectionList + newConnectionList))  # recurse!
-
+                    ncl = intersectingStroke.allConnectedPlanarStrokes(strokeTypes=strokeTypes,
+                                                                       connectionList=(connectionList
+                                                                                       + newConnectionList))  # recurse!
+                    newConnectionList += ncl
                 pass
             pass
         return newConnectionList
@@ -591,7 +629,8 @@ def getActiveGreasePencilObject():
 
 
 def getStrokeData(camera):
-    """goes through all the grease pencil layers for the active frame and gp, and sorts into strokes and intersectionMarkers"""
+    """goes through all the grease pencil layers for the active frame and gp,
+    and sorts into strokes and intersectionMarkers"""
     planarStrokes = []
     intersectionMarkers = []
     INTERSECTION_MARKER_THRESHOLD = 0.1  # this is now in ANGULAR AREA
@@ -617,7 +656,8 @@ def getStrokeData(camera):
                     itsAMarker = False
                     # check material
                     materialIndex = stroke.material_index
-                    if materialIndex == gp.data.materials.keys().index(materialNames().intersection):  # or nPoints < INTERSECTION_MARKER_THRESHOLD: # TODO: set up separate marker detection based on bbox
+                    # or nPoints < INTERSECTION_MARKER_THRESHOLD: # TODO: set up separate marker detection based on bbox
+                    if materialIndex == gp.data.materials.keys().index(materialNames().intersection):
                         # it's an intersection marker
                         # set the material (maybe redundant)
                         itsAMarker = True
@@ -628,7 +668,8 @@ def getStrokeData(camera):
                         if bBoxArea < INTERSECTION_MARKER_THRESHOLD:
                             itsAMarker = True
                             # set the mat, cos it wasn't set
-                            stroke.material_index = gp.data.materials.keys().index(materialNames().intersection)  # by material name
+                            stroke.material_index = gp.data.materials.keys().index(materialNames().intersection)
+                            # by material name
 
                     if itsAMarker:
                         # create an intersectionLine from it
@@ -646,7 +687,8 @@ def getStrokeData(camera):
                             normal = Vector((0, 1, 0))
                         elif materialIndex == gp.data.materials.keys().index(materialNames().z):
                             normal = Vector((0, 0, 1))
-                        elif materialIndex == gp.data.materials.keys().index(materialNames().arbitrary):  # arbitrary plane!
+                        elif materialIndex == gp.data.materials.keys().index(materialNames().arbitrary):
+                            # arbitrary plane!
                             normal = None
                             strokeType = StrokeType.planar_arbitrary
                         else:
@@ -705,7 +747,7 @@ def solveContours():
     camera = Camera(getCameraObject())  # Camera(bpy.context.scene.camera)
 
     # build a list of what intersections affect what strokes:
-    planarStrokes, intersectionMarkers = getStrokeData(camera)    # - build a dict of intersections and a dict of strokes
+    planarStrokes, intersectionMarkers = getStrokeData(camera)    # build a dict of intersections and a dict of strokes
     print('found ', len(planarStrokes), ' planar strokes, ', len(intersectionMarkers), ' intersection markers')
 
     # check screen-space intersections and fill in intersection data
@@ -727,9 +769,6 @@ def solveContours():
     clusters = getClusters(planarStrokes)  # create clusters of all directly-connected axial strokes
     print('calculated clusters')
 
-    # then for each cluster:
-    #   measure how many nodes we can define if we propogate outwards, for each cluster (I guess a recursive 'potential connections' checker that can be reused?) this alternates between axial and arbitrary?
-
     clusters.sort(reverse=True)  # sort them by connectedness
 
     print("Replaning strokes")
@@ -737,18 +776,12 @@ def solveContours():
     for cluster in clusters:
         print(cluster)
         #   if it isn't yet connected:
-        if cluster.strokes[0].hasBeenPlaced is False:               # there should always be at least one stroke in a cluster, since it's required to init one! and if one has been placed, they've all been placed
-            # clusterStartStroke = cluster.mostConnectedStroke()       # pick the most connected stroke of the 'best' cluster from the undefined clusters list
-            # clusterStartStroke.origin = Vector((0,0,0))         # TODO: this should only be done for the first stroke in the chain, and this isn't a good way of doing that
-            # recursivelyReplane(clusterStartStroke)                   # do the big thing until we run outta strokes
+        if cluster.strokes[0].hasBeenPlaced is False:
+            # there should always be at least one stroke in a cluster, since it's required to init one!
+            # and if one has been placed, they've all been placed
             cluster.replaneCluster()
-            # hey, we done!
-            #   propogate definitions outwards from that (using potential connection checker alternately on axial and arbitrary planar strokes until we don't get any more)
-            #       connect that one
-            #       recurse for all it's children
         else:
             print('already replaned, skipping')
-
         # note: for arbitrary planar strokes, all parents must be from one cluster
 
     # not required for the maths, but just to tie things together visually lets position the markers

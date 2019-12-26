@@ -90,7 +90,8 @@ def materialsAssigned():
         return False
 
     for mat in materialNames().allMaterialNames:
-        if mat not in gp.data.materials.keys():  # TODO: doesn't check if mat is IN .materials, it should be if we called this in the right place though
+        if mat not in gp.data.materials.keys():  # TODO: doesn't check if mat is IN .materials,
+            # it should be if we called this in the right place though
             return False
 
     return True
@@ -148,7 +149,7 @@ def setActiveMaterial(materialEnum):
     gp = getActiveGreasePencilObject()
     materialsAreAssigned = materialsAssigned()
 
-    if gp is None or materialsAssigned is False:
+    if gp is None or materialsAreAssigned is False:
         return None
 
     materialIndex = gp.material_slots.keys().index(materialEnum)

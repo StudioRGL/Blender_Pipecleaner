@@ -3,11 +3,6 @@ import sys
 import bpy
 from .ui_utils import *
 
-# OPERATORS ---------------
-# __reload_order_index__ = 1
-
-print('loading contourDrawing')
-
 
 class Pipecleaner_CreateMaterialsOperator(bpy.types.Operator):
     """This adds the required special materials to the scene"""
@@ -32,7 +27,7 @@ class Pipecleaner_AssignMaterialsOperator(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return (materialsAssigned() is False) and (getActiveGreasePencilObject() is not None)
+        return materialsAssigned() is False  # This includes a check if there IS an active GP object
 
     def execute(self, context):
         # createMaterials()
@@ -184,7 +179,10 @@ class PipecleanerPanel(bpy.types.Panel):
     bl_label = "Pipecleaner Tools"
     bl_idname = "PIPECLEANER_PT_tool_panel"
     bl_space_type = 'VIEW_3D'  # 'PROPERTIES'
-    bl_region_type = 'UI'  # 'WINDOW' #  ('WINDOW', 'HEADER', 'CHANNELS', 'TEMPORARY', 'UI', 'TOOLS', 'TOOL_PROPS', 'PREVIEW', 'HUD', 'NAVIGATION_BAR', 'EXECUTE', 'FOOTER', 'TOOL_HEADER')
+    bl_region_type = 'UI'
+    # available regions are:
+    # 'WINDOW' #  ('WINDOW', 'HEADER', 'CHANNELS', 'TEMPORARY', 'UI', 'TOOLS', 'TOOL_PROPS', 'PREVIEW', 'HUD',
+    # 'NAVIGATION_BAR', 'EXECUTE', 'FOOTER', 'TOOL_HEADER')
     bl_category = 'Edit'  # 'Pipecleaner Tools'
     # bl_context = 'data'
 
