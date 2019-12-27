@@ -18,7 +18,7 @@ Experimental addon for Blender, allowing the construction of 3D "pipecleaner" mo
 - [x] add operator for 'solve'
 - [x] add operator for 'draw from camera'
 - [x] add operator for each material
-- [ ] maybe add operator for split/join strokes
+- [x] maybe add operator for split/join strokes
 - [x] add menu/ui
 - [x] add addon stuff
 - [x] position intersection markers in 3D space?
